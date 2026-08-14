@@ -1,0 +1,11 @@
+# 秘密情報
+.env
+
+# Python関連
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# アップロード画像（提出時に含めたくない場合）
+# static/uploads/*
