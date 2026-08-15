@@ -25,6 +25,14 @@
             <td>{{ movie[3] }}</td>
             <td>{{ movie[4] }}</td>
             <td>{{ movie[5] }}</td>
+            <td>
+                <a href="/edit/{{ movie[0] }}">編集</a>
+            </td>
+            <td>
+                <form action="/delete/{{ movie[0] }}" method="post">
+                    <button type="submit">削除</button>
+                </form>
+            </td>
         </tr>
         {% endfor %}
     </table>

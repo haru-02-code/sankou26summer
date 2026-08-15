@@ -34,6 +34,7 @@ def index():
 def add_form():
     return render_template("add.html")
 
+# 登録
 @app.route('/add',methods=['POST'])
 def add_movie():
     title = request.form['movie_name']
@@ -54,7 +55,58 @@ def add_movie():
     cur.close()
     con.close()
 
-    return '登録できました！'
+    return redirect('/')
+
+# 削除
+@app.route('/delete/<int:id>',methods=['POST'])
+def delete_movie(id):
+    con = conn_db()
+    cur = con.cursor()
+
+    sql = "delete from movies where id = %s"
+    cur.execute(sql,[id])
+    con.commit()
+
+    cur.close()
+    con.close()
+
+    return redirect('/')
+
+# 編集画面の表示
+@app.route('/edit/<int:id>')
+def edit_form(id):
+    con = conn_db()
+    cur = con.cursor()
+
+    sql = "select * from movies where id = %s"
+    cur.execute(sql,[id])
+    movie = cur.fetchone()
+
+    cur.close()
+    con.close()
+
+    return render_template("edit.html", movie=movie)
+
+# 更新
+@app.route('/update/<int:id>',methods=['POST'])
+def update_movie(id):
+    title = request.form['movie_name']
+    genre = request.form['movie_genre']
+    watched_date = request.form['movie_watched_date']
+    rating = request.form['movie_rating']
+    review = request.form['movie_review']
+
+    con = conn_db()
+    cur = con.cursor()
+
+    sql = "update movies set title = %s, genre = %s, watched_date = %s, rating = %s, review = %s where id = %s"
+    cur.execute(sql, [title, genre, watched_date, rating, review, id])
+    con.commit()
+
+    cur.close()
+    con.close()
+
+    return redirect('/')
 
 if __name__ == '__main__':
     app.run(debug=True)

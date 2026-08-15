@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>編集画面</title>
+</head>
+<body>
+    <form action="/update/{{ movie[0] }}" method="post">
+        <p>
+            <label for="name">作品名:</label>
+            <input type="text" id="name" name="movie_name" value="{{ movie[1] }}" required />
+        </p>
+        <p>
+            <label for="genre">ジャンル:</label>
+            <input type="text" id="genre" name="movie_genre" value="{{ movie[2] }}" />
+        </p>
+        <p>
+            <label for="watched_date">視聴日:</label>
+            <input type="date" id="watched_date" name="movie_watched_date" value="{{ movie[3] }}" />
+        </p>
+        <p>
+            <label for="rating">評価:</label>
+            <input type="number" id="rating" name="movie_rating" min="1" max="10" value="{{ movie[4] }}" />
+        </p>
+        <p>
+            <label for="review">感想:</label>
+            <textarea id="review" name="movie_review">{{ movie[5] }}</textarea>
+        </p>
+        <p>
+            <button type="submit">更新する</button>
+        </p>
+    </form>
+</body>
+</html>
