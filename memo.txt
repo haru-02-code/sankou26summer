@@ -1,3 +1,0 @@
-MySQLに直接ログインを試す（起動確認と接続確認を同時に行う）
-windows powershellで
-mysql -u root -p
