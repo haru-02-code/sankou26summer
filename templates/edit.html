@@ -5,7 +5,7 @@
     <title>編集画面</title>
 </head>
 <body>
-    <form action="/update/{{ movie[0] }}" method="post">
+    <form action="/update/{{ movie[0] }}" method="post" enctype="multipart/form-data">
         <p>
             <label for="name">作品名:</label>
             <input type="text" id="name" name="movie_name" value="{{ movie[1] }}" required />
@@ -25,6 +25,15 @@
         <p>
             <label for="review">感想:</label>
             <textarea id="review" name="movie_review">{{ movie[5] }}</textarea>
+        </p>
+        <p>
+            <label for="image">ポスター画像:</label>
+            {% if movie[6] %}
+            <br>
+            <img src="/{{ movie[6] }}" width="150" id="current-image">
+            <p>↑現在の画像（新しい画像を選ぶと差し替わります）</p>
+            {% endif %}
+            <input type="file" id="image" name="movie_image" accept="image/*" />
         </p>
         <p>
             <button type="submit">更新する</button>

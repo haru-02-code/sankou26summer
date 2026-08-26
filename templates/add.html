@@ -6,7 +6,7 @@
     <title>登録画面</title>
 </head>
 <body>
-    <form action="/add" method="post">
+    <form action="/add" method="post" enctype="multipart/form-data">
         <p>
             <label for="name">作品名:</label>
             <input type="text" id="name" name="movie_name" required />
@@ -26,6 +26,10 @@
         <p>
             <label for="review">感想:</label>
             <textarea id="review" name="movie_review"></textarea>
+        </p>
+        <p>
+            <label for="image">ポスター画像:</label>
+            <input type="file" id="image" name="movie_image" accept="image/*" />
         </p>
         <p>
             <button type="submit">登録する</button>
