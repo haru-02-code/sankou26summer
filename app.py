@@ -92,6 +92,23 @@ def add_movie():
 
     return redirect(url_for('index'))
 
+#一件だけを取得する
+@app.route('/movie/<int:id>')
+def detail(id):
+    con = conn_db()
+    cur = con.cursor()
+
+    sql = "select * from movies where id = %s"
+    cur.execute(sql,[id])
+    movie = cur.fetchone()
+
+    cur.close()
+    con.close()
+
+    return render_template("movie_detail.html", movie=movie)
+    
+
+
 # 削除
 @app.route('/delete/<int:id>',methods=['POST'])
 def delete_movie(id):

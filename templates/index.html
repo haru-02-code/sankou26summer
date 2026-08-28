@@ -1,16 +1,43 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
+    <script src="https://cdn.tailwindcss.com"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>視聴ログ一覧</title>
 </head>
-<body>
-    <h1>映画・アニメ視聴ログ</h1>
+<body class="bg-gray-900 text-white min-h-screen p-8">
+    <h1 class="text-3xl font-bold mb-6">映画・アニメ視聴ログ</h1>
 
     <a href="/add.html">新規登録</a>
 
-    <table border="1">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {% for movie in movies %}
+        <div class="bg-gray-800 rounded-lg shadow-lg p-4">
+            <div>作品名:{{ movie[1] }}</div>
+            <div>ジャンル:{{ movie[2] }}</div>
+            <div>視聴日:{{ movie[3] }}</div>
+            <div>評価:{{ movie[4] }}</div>
+            <div>感想:{{ movie[5] }}</div>
+            <div>
+                {% if movie[6] %}
+                <img src="/{{ movie[6] }}" width="100">
+                {% else %}
+                なし
+                {% endif %}
+            </div>
+            <div><a href="/edit/{{ movie[0] }}">編集</a></div>
+            <div>
+                <form action="/delete/{{ movie[0] }}" method="post">
+                    <button type="submit">削除</button>
+                </form>
+            </div>
+        </div>
+        
+        {% endfor %}
+    </div>
+
+    <!-- <table border="1">
         <tr>
             <th>作品名</th>
             <th>ジャンル</th>
@@ -43,7 +70,7 @@
             </td>
         </tr>
         {% endfor %}
-    </table>
+    </table> -->
 
 </body>
 </html>
