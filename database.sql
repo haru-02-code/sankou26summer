@@ -11,6 +11,7 @@ CREATE TABLE movies (
     rating int,               -- 評価（整数）
     review text,               -- 感想（長文になる可能性あり）
     image_path varchar(255),           -- 画像パス
+    backdrop_path varchar(255),         --背景シーン画像パス         
     created_at datetime DEFAULT CURRENT_TIMESTAMP,
     updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) CHARACTER SET utf8mb4;

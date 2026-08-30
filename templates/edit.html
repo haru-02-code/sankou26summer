@@ -37,6 +37,15 @@
             <input type="file" id="image" name="movie_image" accept="image/*" />
         </p>
         <p>
+            <label for="backdrop">背景シーン画像:</label>
+            {% if movie[7] %}
+            <br>
+            <img src="/{{ movie[7] }}" width="150" id="current-backdrop">
+            <p>↑現在の画像（新しい画像を選ぶと差し替わります）</p>
+            {% endif %}
+            <input type="file" id="backdrop" name="movie_backdrop" accept="image/*" />
+        </p>
+        <p>
             <button type="submit">更新する</button>
         </p>
     </form>

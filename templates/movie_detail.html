@@ -6,37 +6,66 @@
     <title>作品詳細</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Zen+Old+Mincho:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #0A0A0C; }
         .font-display { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.03em; }
+        .font-title-jp { font-family: 'Zen Old Mincho', serif;font-weight: 700; }
+        .cinematic-fade {
+            background-image:
+                linear-gradient(
+                    to right,
+                    #0A0A0C, #0A0A0Cfb 1%, #0A0A0Cf1 2%, #0A0A0Ce1 3.3%,
+                    #0A0A0Ccd 4.6%, #0A0A0Cb5 6%, #0A0A0C9b, #0A0A0C80,
+                    #0A0A0C65 10%, #0A0A0C4b 11.5%, #0A0A0C34 12.8%,
+                    #0A0A0C1f 14%, #0A0A0C0f 15%, #0A0A0C00 16.7% 83.3%,
+                    #0A0A0C0f 85%, #0A0A0C1f 86%, #0A0A0C34 87.2%,
+                    #0A0A0C4b 88.5%, #0A0A0C65 89.8%, #0A0A0C80, #0A0A0C9b,
+                    #0A0A0Cb5 94%, #0A0A0Ccd 95.4%, #0A0A0Ce1 96.7%,
+                    #0A0A0Cf1 97.9%, #0A0A0Cfb 99%, #0A0A0C
+                ),
+                linear-gradient(
+                    to top,
+                    #0A0A0C 0% 21.5%, #0A0A0Cfb 23.6%, #0A0A0Cf1 26.1%,
+                    #0A0A0Ce1 28.8%, #0A0A0Ccd 31.7%, #0A0A0Cb5 34.7%,
+                    #0A0A0C9b, #0A0A0C80 41%, #0A0A0C65 44%, #0A0A0C4b 47%,
+                    #0A0A0C34 49.9%, #0A0A0C1f 52.5%, #0A0A0C0f 54.9%,
+                    #0A0A0C04 56.9%, #0A0A0C00 58.5%
+                );
+        }
+        .poster-frame-static {
+            position: absolute;
+            inset: 0;
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15);
+            pointer-events: none;
+        }
     </style>
 </head>
 <body class="min-h-screen text-[#EDEBF0]">
 
     <!-- ヒーロー背景：登録した画像を暗くぼかして敷く -->
-    <div class="relative h-[480px] overflow-hidden">
-        {% if movie[6] %}
-        <img src="/{{ movie[6] }}" class="absolute inset-0 w-full h-full object-cover blur-sm scale-110">
+    <div class="relative max-w-6xl mx-auto h-[480px] overflow-hidden">
+        {% if movie[7] %}
+        <img src="/{{ movie[7] }}" class="absolute inset-0 w-full h-full object-cover">
         {% endif %}
-        <div class="absolute inset-0 bg-gradient-to-t from-[#0A0A0C] via-[#0A0A0C]/70 to-[#0A0A0C]/20"></div>
-
+        <div class="absolute inset-0 cinematic-fade"></div>
         <header class="relative max-w-6xl mx-auto px-6 py-5">
             <a href="{{ url_for('index') }}" class="font-display text-2xl tracking-wide">← 一覧に戻る</a>
         </header>
 
         <!-- ポスター＋主要情報 -->
-        <div class="relative max-w-6xl mx-auto px-6 flex items-end gap-8 h-[340px]">
-            <div class="w-44 aspect-[2/3] rounded shadow-2xl overflow-hidden flex-shrink-0 -mb-16 border-4 border-[#0A0A0C] bg-[#1C1A22]">
+        <div class="relative max-w-4xl mx-auto px-6 flex items-end gap-8 h-[340px]">
+            <div class="w-44 aspect-[2/3] rounded overflow-hidden flex-shrink-0 -mb-16 relative">
                 {% if movie[6] %}
                 <img src="/{{ movie[6] }}" class="w-full h-full object-cover">
+                <div class="poster-frame-static"></div>
                 {% endif %}
             </div>
             <div class="pb-6">
                 <p class="text-xs tracking-[0.2em] text-[#B8B4C0] uppercase mb-2">
                     {{ movie[2] }} / {{ movie[3] }} 視聴
                 </p>
-                <h1 class="font-display text-5xl mb-3">{{ movie[1] }}</h1>
+                <h1 class="font-title-jp text-5xl mb-3">{{ movie[1] }}</h1>
                 <div class="flex items-center gap-2">
                     <span class="bg-[#3ECF8E] text-[#0A0A0C] font-display text-2xl px-3 py-0.5 rounded">{{ movie[4] }}</span>
                     <span class="text-[#8B8795] text-sm">/ 10</span>
@@ -49,7 +78,7 @@
     <main class="max-w-6xl mx-auto px-6 mt-24">
         <div class="max-w-2xl">
             <h2 class="text-xs tracking-[0.2em] text-[#8B8795] uppercase mb-3">感想</h2>
-            <p class="text-[#D9D6DE] leading-relaxed">
+            <p class="font-title-jp text-[#D9D6DE] leading-relaxed">
                 {{ movie[5] }}
             </p>
         </div>
