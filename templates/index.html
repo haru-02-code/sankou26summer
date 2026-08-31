@@ -15,6 +15,7 @@
         .poster-frame {
             position: absolute;
             inset: 0;
+            border-radius: inherit;
             box-shadow: inset 0 0 0 1px rgba(255,255,255,0.12);
             transition: box-shadow 0.15s ease-in;
             pointer-events: none;
@@ -51,9 +52,9 @@
                     {% if movie[6] %}
                     <!-- ぼかし画像専用の入れ子コンテナ -->
                     <div class="absolute inset-0 overflow-hidden rounded">
-                        <img src="/{{ movie[6] }}" class="absolute inset-0 w-full h-full object-cover blur-xl scale-125 opacity-50">
+                        <img src="/{{ movie[6] }}" class="absolute inset-0 w-full h-full object-cover blur-xl scale-125 opacity-50 rounded">
                     </div>
-                    <img src="/{{ movie[6] }}" class="absolute inset-0 w-full h-full object-contain">
+                    <img src="/{{ movie[6] }}" class="absolute inset-0 w-full h-full object-contain rounded">
                     <div class="poster-frame"></div>
                     {% else %}
                     <span class="relative text-xs text-[#EDEBF0]/70 font-title-jp tracking-wide">{{ movie[1] }}</span>
