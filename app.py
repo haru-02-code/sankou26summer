@@ -33,24 +33,33 @@ def validate_movie(title, watched_date, rating):
     if not re.match(r"^\d{4}-\d{2}-\d{2}$", watched_date):
         return 'エラー：日付の形式が正しくありません'
 
-    if not re.match(r"^([1-9]|10)$", rating):
+    if not re.match(r"^([1-9]|[1-9][0-9]|100)$", rating):
         return 'エラー：評価は1〜10の数値で入力してください'
 
     return None  # エラーがなければNone
 
 @app.route('/')
 def index():
+    sort = request.args.get('sort', 'name')
+
+    sort_options = {
+        'name': 'title asc',
+        'date': 'created_at desc',
+        'score': 'rating desc'
+    }
+    order_by = sort_options.get(sort, 'created_at desc')
+
     con = conn_db()
     cur = con.cursor()
 
-    sql = "select * from movies"
+    sql = f"select * from movies order by {order_by}"
     cur.execute(sql)
     movies = cur.fetchall()
 
     cur.close()
     con.close()
 
-    return render_template("index.html", movies=movies)
+    return render_template("index.html", movies=movies, sort=sort)
 
 @app.route('/add.html') 
 def add_form():
@@ -110,6 +119,8 @@ def add_movie():
 #一件だけを取得する
 @app.route('/movie/<int:id>')
 def detail(id):
+    sort = request.args.get('sort', 'name')
+
     con = conn_db()
     cur = con.cursor()
 
@@ -120,7 +131,7 @@ def detail(id):
     cur.close()
     con.close()
 
-    return render_template("movie_detail.html", movie=movie)
+    return render_template("movie_detail.html", movie=movie, sort=sort)
     
 
 

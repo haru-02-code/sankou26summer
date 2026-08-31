@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Zen+Old+Mincho:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://use.fontawesome.com/releases/v7.3.1/css/all.css" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #0A0A0C; }
         .font-display { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.03em; }
@@ -40,23 +41,34 @@
             box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15);
             pointer-events: none;
         }
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+        .backdrop-fade-in {
+            animation: fadeIn 1.2s ease-out;
+        }
     </style>
 </head>
 <body class="min-h-screen text-[#EDEBF0]">
 
     <!-- ヒーロー背景：純粋な背景としてのみ機能させる -->
-    <div class="relative max-w-6xl mx-auto h-[480px] overflow-hidden">
+    <div class="relative max-w-6xl mx-auto {% if movie[7] %}h-[480px]{% else %}h-[300px]{% endif %} overflow-hidden">
         {% if movie[7] %}
-        <img src="/{{ movie[7] }}" class="absolute inset-0 w-full h-full object-cover">
+        <img src="/{{ movie[7] }}" class="absolute inset-0 w-full h-full object-cover backdrop-fade-in">
         {% endif %}
         <div class="absolute inset-0 cinematic-fade"></div>
         <header class="relative max-w-6xl mx-auto px-6 py-5">
-            <a href="{{ url_for('index') }}" class="font-display text-2xl tracking-wide">← 一覧に戻る</a>
+            <a href="{{ url_for('index', sort=sort) }}" class="font-display text-2xl tracking-wide">← 一覧に戻る</a>
         </header>
     </div>
 
     <!-- コンテンツ本体：ヒーローの外の、通常の流れに配置。ポスターだけ上に重ねる -->
-    <div class="max-w-6xl mx-auto px-6 -mt-40 relative flex items-start gap-8">
+    <div class="max-w-6xl mx-auto px-6 -mt-40 relative flex items-start justify-center gap-8">
 
         <!-- ポスター -->
         <div class="w-44 aspect-[2/3] rounded overflow-hidden flex-shrink-0 relative">
@@ -67,7 +79,7 @@
         </div>
 
         <!-- タイトル〜感想〜操作 -->
-        <div class="flex-1 pt-2">
+        <div class="pt-2">
             <p class="text-xs tracking-[0.2em] text-[#B8B4C0] uppercase mb-2">
                 {{ movie[2] }} / {{ movie[3] }} 視聴
             </p>
@@ -83,12 +95,14 @@
                 </div>
 
                 <!-- スコア＋操作ボタン：常に感想の固定幅の隣に来る -->
-                <div class="flex flex-col gap-4 flex-shrink-0 w-32">
-                    <div class="flex items-center gap-2">
-                        <span class="bg-[#3ECF8E] text-[#0A0A0C] font-display text-2xl px-3 py-0.5 rounded">{{ movie[4] }}</span>
-                        <span class="text-[#8B8795] text-sm">/ 10</span>
+                <div class="flex flex-col flex-shrink-0 w-32">
+                    <h2 class="text-xs tracking-[0.2em] text-[#8B8795] uppercase mb-3">Score</h2>
+                    <div class="flex items-center mb-4">
+                        <span class="text-2xl mr-2"><i class="fa-solid fa-star" style="color: rgb(255, 212, 59);"></i></span>
+                        <span class="text-2xl font-semibold">{{ movie[4] }}</span>
+                        <span class="text-[#8B8795] text-sm">/100</span>
                     </div>
-                    <a href="/edit/{{ movie[0] }}" class="border border-[#2A2932] text-[#B8B4C0] px-4 py-2 rounded text-sm text-center hover:border-[#3ECF8E] hover:text-[#3ECF8E] transition-colors">編集する</a>
+                    <a href="/edit/{{ movie[0] }}" class="border border-[#2A2932] text-[#B8B4C0] px-4 py-2 rounded text-sm text-center mb-4 hover:border-[#3ECF8E] hover:text-[#3ECF8E] transition-colors">編集する</a>
                     <form action="/delete/{{ movie[0] }}" method="post">
                         <button type="submit" class="w-full border border-[#2A2932] text-[#B45D7A] px-4 py-2 rounded text-sm hover:border-[#B45D7A] transition-colors">削除する</button>
                     </form>

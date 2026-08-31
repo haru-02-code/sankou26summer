@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Zen+Old+Mincho:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
+    html { scrollbar-gutter: stable; }
     body { font-family: 'Inter', sans-serif; background-color: #0A0A0C; }
         .font-display { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.03em; }
         .poster { aspect-ratio: 2 / 3; }
@@ -23,6 +24,9 @@
         .group:hover .poster-frame {
             box-shadow: inset 0 0 0 1px rgba(255,255,255,0.3);
         }
+        .captions-hidden .poster-caption {
+            display: none;
+        }
     </style>
 </head>
 <body class="min-h-screen text-[#EDEBF0] pb-20">
@@ -31,11 +35,21 @@
         <div class="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
             <h1 class="font-display text-3xl tracking-wide">Watchive</h1>
             <div class="flex items-center gap-4">
-                <select class="bg-[#151418] border border-[#2A2932] text-sm text-[#B8B4C0] rounded px-3 py-1.5">
-                    <option>登録日順</option>
-                    <option>作品名順</option>
-                    <option>スコア順</option>
+                <!-- トグルボタン -->
+                <label class="flex items-center gap-2 text-sm text-[#B8B4C0] cursor-pointer">
+                    <input type="checkbox" id="caption-toggle" checked class="sr-only">
+                    <div id="toggle-track" class="w-9 h-5 bg-[#3ECF8E] rounded-full relative transition-colors">
+                        <div id="toggle-thumb" class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform translate-x-4"></div>
+                    </div>
+                    情報を表示
+                </label>
+                <!-- 並び替えプルダウン -->
+                <select onchange="location.href='/?sort=' + this.value" class="bg-[#151418] border border-[#2A2932] text-sm text-[#B8B4C0] rounded px-3 py-1.5">
+                    <option value="name" {% if sort == 'name' %}selected{% endif %}>作品名順</option>
+                    <option value="date" {% if sort == 'date' %}selected{% endif %}>登録日順</option>
+                    <option value="score" {% if sort == 'score' %}selected{% endif %}>スコア順</option>
                 </select>
+                <!-- 新規登録ボタン -->
                 <a href="/add.html" class="bg-[#3ECF8E] text-[#0A0A0C] text-sm font-semibold px-4 py-1.5 rounded hover:opacity-90">
                     + 新規登録
                 </a>
@@ -47,7 +61,7 @@
         <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
 
             {% for movie in movies %}
-            <a href="/movie/{{ movie[0] }}" class="group">
+            <a href="/movie/{{ movie[0] }}?sort={{ sort }}" class="group">
                 <div class="poster rounded overflow-hidden bg-[#1C1A22] flex items-end p-2 relative">
                     {% if movie[6] %}
                     <!-- ぼかし画像専用の入れ子コンテナ -->
@@ -60,11 +74,32 @@
                     <span class="relative text-xs text-[#EDEBF0]/70 font-title-jp tracking-wide">{{ movie[1] }}</span>
                     {% endif %}
                 </div>
-                <p class="text-[11px] text-[#8B8795] font-title-jp mt-1.5 truncate">{{ movie[1] }}</p>
+                <p class="poster-caption text-[11px] text-[#8B8795] font-title-jp mt-1.5 truncate {% if sort == 'score' %}text-center{% endif %}">
+                    {% if sort == 'date' %}
+                    {{ movie[3] }}
+                    {% elif sort == 'score' %}
+                    ★{{ movie[4] }}
+                    {% else %}
+                    {{ movie[1] }}
+                    {% endif %}
+                </p>
             </a>
             {% endfor %}
 
         </div>
     </main>
+
+    <script>
+        const toggle = document.getElementById('caption-toggle');
+        const track = document.getElementById('toggle-track');
+        const thumb = document.getElementById('toggle-thumb');
+
+        toggle.addEventListener('change', function() {
+            document.body.classList.toggle('captions-hidden', !this.checked);
+            track.classList.toggle('bg-[#3ECF8E]', this.checked);
+            track.classList.toggle('bg-[#2A2932]', !this.checked);
+            thumb.classList.toggle('translate-x-4', this.checked);
+        });
+    </script>
 </body>
 </html>
