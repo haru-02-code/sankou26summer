@@ -1,4 +1,4 @@
-from flask import Flask,render_template,request,redirect,url_for
+from flask import Flask,render_template,request,redirect,url_for,jsonify
 # mysqlライブラリの読み込み
 import mysql.connector
 
@@ -11,8 +11,36 @@ from werkzeug.utils import secure_filename
 import os
 # 日本語の画像ファイルも正しく登録するためにファイル名を安全な英数字で自動生成
 import uuid
+#.envの読み込み
+from dotenv import load_dotenv
+load_dotenv()
+TMDB_API_KEY = os.environ.get('TMDB_API_KEY')
+
+import requests
+
+from datetime import date
 
 app = Flask(__name__)
+
+#ジャンルを取得する
+def load_genre_map():
+    url = "https://api.themoviedb.org/3/genre/movie/list"
+    params = {
+        "api_key": TMDB_API_KEY,
+        "language": "ja-JP",
+    }
+    response = requests.get(url, params=params)
+    data = response.json()
+
+    genre_map = {}
+    for genre in data['genres']:
+        genre_map[genre['id']] = genre['name']
+
+    return genre_map
+
+GENRE_MAP = load_genre_map()
+
+# print(GENRE_MAP)
 
 # データベース接続設定
 def conn_db():
@@ -60,6 +88,75 @@ def index():
     con.close()
 
     return render_template("index.html", movies=movies, sort=sort)
+
+#検索用のルート
+@app.route('/api/search_movie')
+def search_movie():
+    query = request.args.get('query')
+    media_type = request.args.get('type', 'movie')
+
+    if not query:
+        return jsonify([])
+
+    if media_type == 'tv':
+        url = "https://api.themoviedb.org/3/search/tv"
+    else:
+        url = "https://api.themoviedb.org/3/search/movie"
+
+    params = {
+        "api_key": TMDB_API_KEY,
+        "query": query,
+        "language": "ja-JP",
+        "include_adult": False
+    }
+
+    response = requests.get(url, params=params)
+    data = response.json()
+
+    MIN_POPULARITY = 2
+    today_str = date.today().isoformat()
+    EXCLUDED_GENRE_IDS = {99}
+
+    results = []
+    for item in data['results']:
+        # アダルトフラグが立っているものは除外
+        if item.get('adult', False):
+            continue
+        # ビデオ作品は除外
+        if item.get('video', False):
+            continue
+        # 話題性が低すぎる作品は除外
+        if item.get('popularity', 0) < MIN_POPULARITY:
+            continue
+
+        # 公開日が空欄、または未来の日付の作品は除外
+        release = item.get('release_date') or item.get('first_air_date') or ''
+        if not release:
+            continue
+        if release > today_str:
+            continue
+
+        # あらすじが空欄の作品は除外
+        if not item.get('overview'):
+            continue
+
+        # ポスター画像がない作品は除外
+        if not item.get('poster_path'):
+            continue
+
+        # 特定ジャンル（ドキュメンタリーなど）は除外
+        genre_ids = set(item.get('genre_ids', []))
+        if genre_ids & EXCLUDED_GENRE_IDS:
+            continue
+
+        results.append(item)
+
+    return jsonify(results)
+
+#検索画面へのルート
+@app.route('/search')
+def search():
+    return render_template("search.html")
 
 @app.route('/add.html') 
 def add_form():

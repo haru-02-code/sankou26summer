@@ -8,6 +8,11 @@
 </head>
 <body>
     <form action="/add" method="post" enctype="multipart/form-data">
+        <div style="position: relative;">
+            <label for="tmdb-search">作品を検索（TMDbから自動入力）:</label>
+            <input type="text" id="tmdb-search" placeholder="作品名を入力..." autocomplete="off">
+            <div id="search-results" style="position: absolute; z-index: 10;"></div>
+        </div>
         <p>
             <label for="name">作品名:</label>
             <input type="text" id="name" name="movie_name" required />
@@ -40,5 +45,39 @@
             <button type="submit">登録する</button>
         </p>
     </form>
+
+    <script>
+        const searchInput = document.getElementById('tmdb-search');
+        const resultsBox = document.getElementById('search-results');
+
+        searchInput.addEventListener('input', function() {
+            const query = this.value;
+
+            if (query.length < 1) {
+                resultsBox.innerHTML = '';
+                return;
+            }
+
+            fetch('/api/search_movie?query=' + encodeURIComponent(query))
+                .then(response => response.json())
+                .then(data => {
+                    resultsBox.innerHTML = '';
+
+                    data.forEach(movie => {
+                        const item = document.createElement('div');
+                        item.textContent = movie.title + '（' + (movie.release_date || '不明') + '）';
+                        item.style.cursor = 'pointer';
+                        item.style.padding = '4px';
+                        item.style.background = '#1C1A22';
+
+                        item.addEventListener('click', function() {
+                            // ここは次のステップで実装します
+                        });
+
+                        resultsBox.appendChild(item);
+                    });
+                });
+        });
+    </script>
 </body>
 </html>
