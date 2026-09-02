@@ -2,27 +2,124 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>確認用</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ movie.title }} - Watchive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Zen+Old+Mincho:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://use.fontawesome.com/releases/v7.3.1/css/all.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0A0A0C; }
+        .font-display { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.03em; }
+        .font-title-jp { font-family: 'Zen Old Mincho', serif; font-weight: 700; }
+        .cinematic-fade {
+            background-image:
+                linear-gradient(
+                    to right,
+                    #0A0A0C, #0A0A0Cfb 1%, #0A0A0Cf1 2%, #0A0A0Ce1 3.3%,
+                    #0A0A0Ccd 4.6%, #0A0A0Cb5 6%, #0A0A0C9b, #0A0A0C80,
+                    #0A0A0C65 10%, #0A0A0C4b 11.5%, #0A0A0C34 12.8%,
+                    #0A0A0C1f 14%, #0A0A0C0f 15%, #0A0A0C00 16.7% 83.3%,
+                    #0A0A0C0f 85%, #0A0A0C1f 86%, #0A0A0C34 87.2%,
+                    #0A0A0C4b 88.5%, #0A0A0C65 89.8%, #0A0A0C80, #0A0A0C9b,
+                    #0A0A0Cb5 94%, #0A0A0Ccd 95.4%, #0A0A0Ce1 96.7%,
+                    #0A0A0Cf1 97.9%, #0A0A0Cfb 99%, #0A0A0C
+                ),
+                linear-gradient(
+                    to top,
+                    #0A0A0C 0% 21.5%, #0A0A0Cfb 23.6%, #0A0A0Cf1 26.1%,
+                    #0A0A0Ce1 28.8%, #0A0A0Ccd 31.7%, #0A0A0Cb5 34.7%,
+                    #0A0A0C9b, #0A0A0C80 41%, #0A0A0C65 44%, #0A0A0C4b 47%,
+                    #0A0A0C34 49.9%, #0A0A0C1f 52.5%, #0A0A0C0f 54.9%,
+                    #0A0A0C04 56.9%, #0A0A0C00 58.5%
+                );
+        }
+        .poster-frame-static {
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15);
+            pointer-events: none;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .backdrop-fade-in {
+            animation: fadeIn 1.2s ease-out;
+        }
+    </style>
 </head>
-<body>
-    <h1>動作確認</h1>
-    <p>DBに保存済みか: {{ movie.in_db }}</p>
-    <p>tmdb_id: {{ movie.tmdb_id }}</p>
-    <p>タイトル: {{ movie.title }}</p>
-    <p>あらすじ: {{ movie.overview }}</p>
-    <p>ポスター画像パス: {{ movie.poster_path }}</p>
-    <p>背景画像パス: {{ movie.backdrop_path }}</p>
-    <p>公開日: {{ movie.release_date }}</p>
-    <p>ジャンルID: {{ movie.genre_ids }}</p>
+<body class="min-h-screen text-[#EDEBF0]">
 
-    <h2>ポスター画像（表示テスト）</h2>
-    <img src="/{{ movie.poster_path }}" width="200">
-    <img src="/{{ movie.backdrop_path }}" width="200">
+    <!-- ヒーロー背景 -->
+    <div class="relative max-w-6xl mx-auto {% if movie.backdrop_path %}h-[650px]{% else %}h-[300px]{% endif %} overflow-hidden">
+        {% if movie.backdrop_path %}
+        <img src="{{ movie.backdrop_path }}" class="absolute inset-0 w-full h-full object-cover backdrop-fade-in">
+        {% endif %}
+        <div class="absolute inset-0 cinematic-fade"></div>
+        <header class="relative max-w-6xl mx-auto px-6 py-5">
+            <a href="#" onclick="history.back(); return false;" class="font-display text-2xl tracking-wide">← 検索に戻る</a>
+        </header>
+    </div>
 
-    <form action="/watchlist/add" method="post">
-        <input type="hidden" name="media_type" value="{{ media_type }}">
-        <input type="hidden" name="tmdb_id" value="{{ tmdb_id }}">
-        <button type="submit">ウォッチリストに追加</button>
-    </form>
+    <!-- コンテンツ本体 -->
+    <div class="max-w-6xl mx-auto px-6 -mt-40 relative flex items-start justify-center gap-8">
+
+        <!-- ポスター -->
+        <div class="w-44 aspect-[2/3] rounded overflow-hidden flex-shrink-0 relative">
+            {% if movie.poster_path %}
+            <img src="{{ movie.poster_path }}" class="w-full h-full object-cover">
+            <div class="poster-frame-static"></div>
+            {% endif %}
+        </div>
+
+        <!-- タイトル〜あらすじ〜操作 -->
+        <div class="pt-2">
+            <p class="text-xs tracking-[0.2em] text-[#B8B4C0] uppercase mb-2">
+                {% for g in movie.genres %}{{ g.name }}{% if not loop.last %} / {% endif %}{% endfor %}
+                {% if movie.release_date %} ・ {{ movie.release_date }} 公開{% endif %}
+            </p>
+            <h1 class="font-title-jp text-5xl mb-8">{{ movie.title }}</h1>
+
+            <div class="flex gap-10">
+                <!-- あらすじ -->
+                <div class="w-96">
+                    <h2 class="text-xs tracking-[0.2em] text-[#8B8795] uppercase mb-3">あらすじ</h2>
+                    <p class="font-title-jp text-[#D9D6DE] leading-relaxed">
+                        {{ movie.overview }}
+                    </p>
+                </div>
+
+                <!-- 操作ボタン -->
+                <div class="flex flex-col flex-shrink-0 w-40">
+                    {% if review_count > 0 %}
+                    <h2 class="text-xs tracking-[0.2em] text-[#8B8795] uppercase mb-3">Your Log</h2>
+                    <p class="text-sm text-[#3ECF8E] mb-4">レビュー登録済み（{{ review_count }}件）</p>
+                    {% endif %}
+
+                    <form action="/watchlist/add" method="post" class="mb-3">
+                        <input type="hidden" name="media_type" value="{{ media_type }}">
+                        <input type="hidden" name="tmdb_id" value="{{ movie.tmdb_id }}">
+                        {% if in_watchlist %}
+                        <button type="submit" disabled class="w-full border border-[#2A2932] text-[#6B6678] px-4 py-2 rounded text-sm">ウォッチリスト追加済み</button>
+                        {% else %}
+                        <button type="submit" class="w-full border border-[#2A2932] text-[#B8B4C0] px-4 py-2 rounded text-sm hover:border-[#3ECF8E] hover:text-[#3ECF8E] transition-colors">+ ウォッチリストに追加</button>
+                        {% endif %}
+                    </form>
+
+                    <button id="open-review-modal" class="w-full bg-[#3ECF8E] text-[#0A0A0C] px-4 py-2 rounded text-sm font-semibold hover:opacity-90 transition-opacity">
+                        レビューを書く
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- レビュー作成モーダル（次のステップで中身を実装） -->
+    <div id="review-modal" class="hidden">
+        <!-- ここに、視聴日・スコア・感想の入力フォームが入ります -->
+    </div>
+
 </body>
 </html>

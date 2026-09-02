@@ -169,6 +169,15 @@
             suggestBox.classList.remove('hidden');
         }
 
+        // 検索を実行するたびに、履歴に追加する
+        function saveSearchHistory(query) {
+            let searchHistoryList = JSON.parse(localStorage.getItem('search_history') || '[]');
+            searchHistoryList = searchHistoryList.filter(h => h !== query);
+            searchHistoryList.unshift(query);
+            searchHistoryList = searchHistoryList.slice(0, 10);
+            localStorage.setItem('search_history', JSON.stringify(searchHistoryList));
+        }
+
         // 確定検索（ボタン・Enter・サジェスト選択後に呼ばれる）
         function runSearch() {
             const query = searchInput.value;
@@ -181,9 +190,70 @@
             emptyMessage.classList.add('hidden');
             resultsBox.innerHTML = '<p class="text-[#8B8795] text-sm col-span-full">検索中...</p>';
 
+            // URLに検索条件を反映する（ページ遷移はしない）
+            const newUrl = `/search?query=${encodeURIComponent(query)}&type=${currentType}`;
+            history.pushState({}, '', newUrl);
+
             fetchResults(query).then(data => {
                 displayResults(data);
             });
+
+            saveSearchHistory(query);
+        }
+
+        // 検索ボックスがクリックされたとき、空欄なら履歴を表示する
+        searchInput.addEventListener('focus', function() {
+            if (this.value.length < 1) {
+                showSearchHistory();
+            }
+        });
+
+        // 入力するたびに、サジェストまたは履歴を更新する
+        searchInput.addEventListener('input', function() {
+            clearTimeout(debounceTimer);
+            const query = this.value;
+
+            if (query.length < 1) {
+                showSearchHistory();
+                return;
+            }
+
+            debounceTimer = setTimeout(() => {
+                fetchResults(query).then(data => showSuggestions(data));
+            }, 300);
+        });
+
+        function showSearchHistory() {
+            const searchHistoryList = JSON.parse(localStorage.getItem('search_history') || '[]');
+
+            if (searchHistoryList.length === 0) {
+                suggestBox.classList.add('hidden');
+                return;
+            }
+
+            suggestBox.innerHTML = '';
+
+            searchHistoryList.forEach(term => {
+                const item = document.createElement('div');
+                item.className = 'px-4 py-2.5 hover:bg-[#1C1A22] cursor-pointer text-sm border-b border-[#2A2932] last:border-b-0 flex items-center gap-2.5';
+                item.innerHTML = `
+                    <svg class="w-3.5 h-3.5 text-[#6B6678] flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="9"></circle>
+                        <polyline points="12 7 12 12 15 14"></polyline>
+                    </svg>
+                    <span>${term}</span>
+                `;
+
+                item.addEventListener('click', function() {
+                    searchInput.value = term;
+                    suggestBox.classList.add('hidden');
+                    runSearch();
+                });
+
+                suggestBox.appendChild(item);
+            });
+
+            suggestBox.classList.remove('hidden');
         }
 
         // 結果一覧（ポスターグリッド）を表示する
@@ -225,6 +295,28 @@
                 resultsBox.appendChild(card);
             });
         }
+
+        // ページ読み込み時、URLに検索条件があれば自動で復元する
+        (function restoreFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const initialQuery = urlParams.get('query');
+            const initialType = urlParams.get('type');
+
+            if (initialType === 'tv') {
+                currentType = 'tv';
+                document.querySelectorAll('.tab-btn').forEach(b => {
+                    b.classList.remove('bg-[#3ECF8E]', 'text-[#0A0A0C]');
+                    b.classList.add('bg-[#151418]', 'text-[#B8B4C0]');
+                });
+                document.getElementById('tab-tv').classList.remove('bg-[#151418]', 'text-[#B8B4C0]');
+                document.getElementById('tab-tv').classList.add('bg-[#3ECF8E]', 'text-[#0A0A0C]');
+            }
+
+            if (initialQuery) {
+                searchInput.value = initialQuery;
+                runSearch();
+            }
+        })();
     </script>
 </body>
 </html>

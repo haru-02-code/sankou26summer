@@ -223,52 +223,47 @@ def search():
 
 @app.route('/movie/tmdb/<media_type>/<int:tmdb_id>')
 def movie_tmdb_detail(media_type, tmdb_id):
+    # 常にTMDbから最新情報を取得する
+    if media_type == 'tv':
+        url = f"https://api.themoviedb.org/3/{media_type}/{tmdb_id}"
+    else:
+        url = f"https://api.themoviedb.org/3/movie/{tmdb_id}"
+
+    params = {"api_key": TMDB_API_KEY, "language": "ja-JP"}
+    response = requests.get(url, params=params)
+    data = response.json()
+
+    movie = {
+        'tmdb_id': tmdb_id,
+        'title': data.get('title') or data.get('name'),
+        'overview': data.get('overview'),
+        'poster_path': 'https://image.tmdb.org/t/p/w500' + data['poster_path'] if data.get('poster_path') else None,
+        'backdrop_path': 'https://image.tmdb.org/t/p/original' + data['backdrop_path'] if data.get('backdrop_path') else None,
+        'release_date': data.get('release_date') or data.get('first_air_date'),
+        'genres': data.get('genres', [])
+    }
+
+    # すでにウォッチリスト・レビューに追加済みか、DBで確認する
     con = conn_db()
     cur = con.cursor()
-
-    cur.execute("select * from movies where tmdb_id = %s", [tmdb_id])
+    cur.execute("select id from movies where tmdb_id = %s", [tmdb_id])
     row = cur.fetchone()
+
+    in_watchlist = False
+    review_count = 0
+    if row:
+        db_movie_id = row[0]
+        cur.execute("select count(*) from watchlist where movie_id = %s", [db_movie_id])
+        in_watchlist = cur.fetchone()[0] > 0
+
+        cur.execute("select count(*) from reviews where movie_id = %s", [db_movie_id])
+        review_count = cur.fetchone()[0]
+
     cur.close()
     con.close()
 
-    if row:
-        # すでにDBにある場合：タプルを、辞書に変換する
-        movie = {
-            'id': row[0],
-            'tmdb_id': row[1],
-            'title': row[2],
-            'overview': row[3],
-            'poster_path': row[4],
-            'backdrop_path': row[5],
-            'release_date': row[6],
-            'genre_ids': row[7],
-            'in_db': True
-        }
-    else:
-        # まだDBにない場合：TMDbから取得し、同じ形の辞書に整える
-        if media_type == 'tv':
-            url = f"https://api.themoviedb.org/3/tv/{tmdb_id}"
-        else:
-            url = f"https://api.themoviedb.org/3/movie/{tmdb_id}"
-
-        params = {"api_key": TMDB_API_KEY, "language": "ja-JP"}
-        response = requests.get(url, params=params)
-        data = response.json()
-
-        movie = {
-            'id': None,
-            'tmdb_id': tmdb_id,
-            'title': data.get('title') or data.get('name'),
-            'overview': data.get('overview'),
-            'poster_path': 'https://image.tmdb.org/t/p/w500' + data['poster_path'] if data.get('poster_path') else None,
-            'backdrop_path': 'https://image.tmdb.org/t/p/original' + data['backdrop_path'] if data.get('backdrop_path') else None,
-            'release_date': data.get('release_date') or data.get('first_air_date'),
-            'genre_ids': ','.join(str(g['id']) for g in data.get('genres', [])),
-            'in_db': False
-        }
-
-    return render_template("movie_detail_new.html", movie=movie, media_type=media_type, tmdb_id=tmdb_id)
-
+    return render_template("movie_detail_new.html", movie=movie, media_type=media_type,
+                            in_watchlist=in_watchlist, review_count=review_count)
 #ウォッチリスト追加用のルート
 @app.route('/watchlist/add', methods=['POST'])
 def add_to_watchlist():
