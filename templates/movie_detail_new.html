@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>確認用</title>
+</head>
+<body>
+    <h1>動作確認</h1>
+    <p>DBに保存済みか: {{ movie.in_db }}</p>
+    <p>tmdb_id: {{ movie.tmdb_id }}</p>
+    <p>タイトル: {{ movie.title }}</p>
+    <p>あらすじ: {{ movie.overview }}</p>
+    <p>ポスター画像パス: {{ movie.poster_path }}</p>
+    <p>背景画像パス: {{ movie.backdrop_path }}</p>
+    <p>公開日: {{ movie.release_date }}</p>
+    <p>ジャンルID: {{ movie.genre_ids }}</p>
+
+    <h2>ポスター画像（表示テスト）</h2>
+    <img src="/{{ movie.poster_path }}" width="200">
+    <img src="/{{ movie.backdrop_path }}" width="200">
+
+    <form action="/watchlist/add" method="post">
+        <input type="hidden" name="media_type" value="{{ media_type }}">
+        <input type="hidden" name="tmdb_id" value="{{ tmdb_id }}">
+        <button type="submit">ウォッチリストに追加</button>
+    </form>
+</body>
+</html>

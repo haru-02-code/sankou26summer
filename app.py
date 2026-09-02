@@ -23,11 +23,11 @@ from datetime import date
 app = Flask(__name__)
 
 #ジャンルを取得する
-def load_genre_map():
-    url = "https://api.themoviedb.org/3/genre/movie/list"
+def load_genre_map(media_type='movie'):
+    url = f"https://api.themoviedb.org/3/genre/{media_type}/list"
     params = {
         "api_key": TMDB_API_KEY,
-        "language": "ja-JP",
+        "language": "ja-JP"
     }
     response = requests.get(url, params=params)
     data = response.json()
@@ -38,7 +38,11 @@ def load_genre_map():
 
     return genre_map
 
-GENRE_MAP = load_genre_map()
+GENRE_MAP = load_genre_map('movie')
+TV_GENRE_MAP = load_genre_map('tv')
+
+EXCLUDED_GENRE_IDS_MOVIE = {99}  # ドキュメンタリー
+EXCLUDED_GENRE_IDS_TV = {99, 10763, 10764, 10767}  # ドキュメンタリー, News, Reality, Talk
 
 # print(GENRE_MAP)
 
@@ -65,6 +69,71 @@ def validate_movie(title, watched_date, rating):
         return 'エラー：評価は1〜10の数値で入力してください'
 
     return None  # エラーがなければNone
+
+def save_tmdb_image(image_path):
+    """TMDbの画像パスから、画像をダウンロードして保存し、保存先パスを返す"""
+    if not image_path:
+        return None
+
+    image_url = "https://image.tmdb.org/t/p/original" + image_path
+    response = requests.get(image_url)
+
+    ext = os.path.splitext(image_path)[1]
+    filename = uuid.uuid4().hex + ext
+    save_path = 'static/uploads/' + filename
+
+    with open(save_path, 'wb') as f:
+        f.write(response.content)
+
+    return save_path
+
+
+# DBになければ登録、あれば取得する関数
+def get_or_create_movie(media_type, tmdb_id):
+    """
+    tmdb_idの作品が自分のDBにあればそのidを返す。
+    なければTMDbから取得してINSERTし、新しく作ったidを返す。
+    """
+    con = conn_db()
+    cur = con.cursor()
+
+    cur.execute("select id from movies where tmdb_id = %s", [tmdb_id])
+    row = cur.fetchone()
+
+    if row:
+        movie_id = row[0]
+        cur.close()
+        con.close()
+        return movie_id
+
+    # まだDBにない場合、TMDbから取得する
+    if media_type == 'tv':
+        url = f"https://api.themoviedb.org/3/tv/{tmdb_id}"
+    else:
+        url = f"https://api.themoviedb.org/3/movie/{tmdb_id}"
+
+    params = {"api_key": TMDB_API_KEY, "language": "ja-JP"}
+    response = requests.get(url, params=params)
+    data = response.json()
+
+    title = data.get('title') or data.get('name')
+    overview = data.get('overview')
+    release_date = data.get('release_date') or data.get('first_air_date') or None
+    genre_ids = ','.join(str(g['id']) for g in data.get('genres', []))
+
+    poster_path = save_tmdb_image(data.get('poster_path'))
+    backdrop_path = save_tmdb_image(data.get('backdrop_path'))
+
+    sql = "insert into movies (tmdb_id, title, overview, poster_path, backdrop_path, release_date, genre_ids) values (%s, %s, %s, %s, %s, %s, %s)"
+    cur.execute(sql, [tmdb_id, title, overview, poster_path, backdrop_path, release_date, genre_ids])
+    con.commit()
+
+    movie_id = cur.lastrowid
+
+    cur.close()
+    con.close()
+
+    return movie_id
 
 @app.route('/')
 def index():
@@ -100,8 +169,10 @@ def search_movie():
 
     if media_type == 'tv':
         url = "https://api.themoviedb.org/3/search/tv"
+        excluded_genre_ids = EXCLUDED_GENRE_IDS_TV
     else:
         url = "https://api.themoviedb.org/3/search/movie"
+        excluded_genre_ids = EXCLUDED_GENRE_IDS_MOVIE
 
     params = {
         "api_key": TMDB_API_KEY,
@@ -115,38 +186,29 @@ def search_movie():
 
     MIN_POPULARITY = 2
     today_str = date.today().isoformat()
-    EXCLUDED_GENRE_IDS = {99}
 
     results = []
     for item in data['results']:
-        # アダルトフラグが立っているものは除外
         if item.get('adult', False):
             continue
-        # ビデオ作品は除外
         if item.get('video', False):
             continue
-        # 話題性が低すぎる作品は除外
         if item.get('popularity', 0) < MIN_POPULARITY:
             continue
 
-        # 公開日が空欄、または未来の日付の作品は除外
         release = item.get('release_date') or item.get('first_air_date') or ''
         if not release:
             continue
         if release > today_str:
             continue
 
-        # あらすじが空欄の作品は除外
         if not item.get('overview'):
             continue
-
-        # ポスター画像がない作品は除外
         if not item.get('poster_path'):
             continue
 
-        # 特定ジャンル（ドキュメンタリーなど）は除外
         genre_ids = set(item.get('genre_ids', []))
-        if genre_ids & EXCLUDED_GENRE_IDS:
+        if genre_ids & excluded_genre_ids:
             continue
 
         results.append(item)
@@ -157,6 +219,78 @@ def search_movie():
 @app.route('/search')
 def search():
     return render_template("search.html")
+
+
+@app.route('/movie/tmdb/<media_type>/<int:tmdb_id>')
+def movie_tmdb_detail(media_type, tmdb_id):
+    con = conn_db()
+    cur = con.cursor()
+
+    cur.execute("select * from movies where tmdb_id = %s", [tmdb_id])
+    row = cur.fetchone()
+    cur.close()
+    con.close()
+
+    if row:
+        # すでにDBにある場合：タプルを、辞書に変換する
+        movie = {
+            'id': row[0],
+            'tmdb_id': row[1],
+            'title': row[2],
+            'overview': row[3],
+            'poster_path': row[4],
+            'backdrop_path': row[5],
+            'release_date': row[6],
+            'genre_ids': row[7],
+            'in_db': True
+        }
+    else:
+        # まだDBにない場合：TMDbから取得し、同じ形の辞書に整える
+        if media_type == 'tv':
+            url = f"https://api.themoviedb.org/3/tv/{tmdb_id}"
+        else:
+            url = f"https://api.themoviedb.org/3/movie/{tmdb_id}"
+
+        params = {"api_key": TMDB_API_KEY, "language": "ja-JP"}
+        response = requests.get(url, params=params)
+        data = response.json()
+
+        movie = {
+            'id': None,
+            'tmdb_id': tmdb_id,
+            'title': data.get('title') or data.get('name'),
+            'overview': data.get('overview'),
+            'poster_path': 'https://image.tmdb.org/t/p/w500' + data['poster_path'] if data.get('poster_path') else None,
+            'backdrop_path': 'https://image.tmdb.org/t/p/original' + data['backdrop_path'] if data.get('backdrop_path') else None,
+            'release_date': data.get('release_date') or data.get('first_air_date'),
+            'genre_ids': ','.join(str(g['id']) for g in data.get('genres', [])),
+            'in_db': False
+        }
+
+    return render_template("movie_detail_new.html", movie=movie, media_type=media_type, tmdb_id=tmdb_id)
+
+#ウォッチリスト追加用のルート
+@app.route('/watchlist/add', methods=['POST'])
+def add_to_watchlist():
+    media_type = request.form['media_type']
+    tmdb_id = int(request.form['tmdb_id'])
+
+    # 作品をDBに確保する（なければ作る、あれば既存のidを使う）
+    movie_id = get_or_create_movie(media_type, tmdb_id)
+
+    con = conn_db()
+    cur = con.cursor()
+
+    sql = "insert into watchlist (movie_id) values (%s)"
+    cur.execute(sql, [movie_id])
+    con.commit()
+
+    cur.close()
+    con.close()
+
+    return redirect(url_for('index'))
+
+
 
 @app.route('/add.html') 
 def add_form():
