@@ -202,8 +202,9 @@ def search_movie():
         if release > today_str:
             continue
 
-        if not item.get('overview'):
-            continue
+        #あらすじなのを除外はやめた方がいいかも    
+        # if not item.get('overview'):
+        #     continue
         if not item.get('poster_path'):
             continue
 
@@ -278,6 +279,36 @@ def add_to_watchlist():
 
     sql = "insert into watchlist (movie_id) values (%s)"
     cur.execute(sql, [movie_id])
+    con.commit()
+
+    cur.close()
+    con.close()
+
+    return redirect(url_for('index'))
+
+# reviews追加用ルート
+@app.route('/reviews/add', methods=['POST'])
+def add_review():
+    media_type = request.form['media_type']
+    tmdb_id = int(request.form['tmdb_id'])
+    watched_date = request.form['watched_date']
+    rating = request.form['rating']
+    review = request.form['review']
+
+    # バリデーション（作品名の代わりに、視聴日・スコアだけチェックする）
+    if not re.match(r"^\d{4}-\d{2}-\d{2}$", watched_date):
+        return 'エラー：日付の形式が正しくありません'
+    if not re.match(r"^([1-9]|[1-9][0-9]|100)$", rating):
+        return 'エラー：評価は1〜100の数値で入力してください'
+
+    # 作品をDBに確保する
+    movie_id = get_or_create_movie(media_type, tmdb_id)
+
+    con = conn_db()
+    cur = con.cursor()
+
+    sql = "insert into reviews (movie_id, watched_date, rating, review) values (%s, %s, %s, %s)"
+    cur.execute(sql, [movie_id, watched_date, rating, review])
     con.commit()
 
     cur.close()

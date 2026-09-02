@@ -4,9 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ movie.title }} - Watchive</title>
+    <!-- Tailwind CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <!-- google fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Zen+Old+Mincho:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- fontawesome -->
     <link href="https://use.fontawesome.com/releases/v7.3.1/css/all.css" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #0A0A0C; }
@@ -48,18 +53,28 @@
         .backdrop-fade-in {
             animation: fadeIn 1.2s ease-out;
         }
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(0.6);
+        }
     </style>
 </head>
 <body class="min-h-screen text-[#EDEBF0]">
 
     <!-- ヒーロー背景 -->
-    <div class="relative max-w-6xl mx-auto {% if movie.backdrop_path %}h-[650px]{% else %}h-[300px]{% endif %} overflow-hidden">
+    <div class="relative max-w-6xl mx-auto {% if movie.backdrop_path %}h-[700px]{% else %}h-[300px]{% endif %} overflow-hidden">
         {% if movie.backdrop_path %}
         <img src="{{ movie.backdrop_path }}" class="absolute inset-0 w-full h-full object-cover backdrop-fade-in">
         {% endif %}
         <div class="absolute inset-0 cinematic-fade"></div>
         <header class="relative max-w-6xl mx-auto px-6 py-5">
-            <a href="#" onclick="history.back(); return false;" class="font-display text-2xl tracking-wide">← 検索に戻る</a>
+            <a href="#" onclick="history.back(); return false;"
+            class="inline-flex items-center gap-2 text-sm text-[#B8B4C0] hover:text-white transition-colors">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                戻る
+            </a>
         </header>
     </div>
 
@@ -78,17 +93,27 @@
         <div class="pt-2">
             <p class="text-xs tracking-[0.2em] text-[#B8B4C0] uppercase mb-2">
                 {% for g in movie.genres %}{{ g.name }}{% if not loop.last %} / {% endif %}{% endfor %}
-                {% if movie.release_date %} ・ {{ movie.release_date }} 公開{% endif %}
+                {% if movie.release_date %}  ({{ movie.release_date }}){% endif %}
             </p>
-            <h1 class="font-title-jp text-5xl mb-8">{{ movie.title }}</h1>
+            <h1 class="font-title-jp text-5xl mb-8 tracking-tight">{{ movie.title }}</h1>
 
             <div class="flex gap-10">
                 <!-- あらすじ -->
                 <div class="w-96">
                     <h2 class="text-xs tracking-[0.2em] text-[#8B8795] uppercase mb-3">あらすじ</h2>
+                    {% if movie.overview %}
                     <p class="font-title-jp text-[#D9D6DE] leading-relaxed">
                         {{ movie.overview }}
                     </p>
+                    {% else %}
+                    <div class="min-h-[120px] flex items-center justify-center">
+                        <p class="text-sm text-[#6B6678] leading-relaxed text-center">
+                            あらすじが登録されていません。<br>
+                            ウォッチリストに追加、またはレビューを書くと、<br>
+                            自分であらすじを追加できるようになります。
+                        </p>
+                    </div>
+                    {% endif %}
                 </div>
 
                 <!-- 操作ボタン -->
@@ -116,10 +141,65 @@
         </div>
     </div>
 
-    <!-- レビュー作成モーダル（次のステップで中身を実装） -->
-    <div id="review-modal" class="hidden">
-        <!-- ここに、視聴日・スコア・感想の入力フォームが入ります -->
+    <!-- レビュー作成モーダル -->
+    <div id="review-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center">
+        <div id="modal-overlay" class="absolute inset-0 bg-black/70"></div>
+
+        <div class="relative bg-[#151418] border border-[#2A2932] rounded-lg w-full max-w-md mx-4 p-6">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="font-title-jp text-xl">レビューを書く</h2>
+                <button id="close-modal" class="text-[#8B8795] hover:text-white text-xl leading-none">&times;</button>
+            </div>
+
+            <form id="review-form" action="/reviews/add" method="post">
+                <input type="hidden" name="media_type" value="{{ media_type }}">
+                <input type="hidden" name="tmdb_id" value="{{ movie.tmdb_id }}">
+
+                <div class="mb-4">
+                    <label class="block text-xs tracking-[0.2em] text-[#8B8795] uppercase mb-2">視聴日</label>
+                    <input type="date" name="watched_date" required
+                        class="w-full bg-[#0A0A0C] border border-[#2A2932] text-sm text-[#EDEBF0] rounded px-3 py-2">
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-xs tracking-[0.2em] text-[#8B8795] uppercase mb-2">マイスコア（1〜100）</label>
+                    <input type="number" name="rating" min="1" max="100" required
+                        class="w-full bg-[#0A0A0C] border border-[#2A2932] text-sm text-[#EDEBF0] rounded px-3 py-2">
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-xs tracking-[0.2em] text-[#8B8795] uppercase mb-2">感想</label>
+                    <textarea name="review" rows="4" id="review-textarea"
+                            class="w-full bg-[#0A0A0C] border border-[#2A2932] text-sm text-[#EDEBF0] rounded px-3 py-2 resize-none overflow-hidden"></textarea>
+                </div>
+
+                <button type="submit" class="w-full bg-[#3ECF8E] text-[#0A0A0C] py-2.5 rounded text-sm font-semibold hover:opacity-90">
+                    レビューを保存する
+                </button>
+            </form>
+        </div>
     </div>
+
+    {% include 'footer.html' %}
+
+    <script>
+        // モーダルの開閉など、シンプルなDOM操作にjQueryを使用
+        $(document).ready(function() {
+            $('#open-review-modal').on('click', function() {
+                $('#review-modal').removeClass('hidden');
+            });
+
+            $('#close-modal, #modal-overlay').on('click', function() {
+                $('#review-modal').addClass('hidden');
+            });
+        });
+
+        // textboxを入力に応じて自動で高さを調整する
+        $('#review-textarea').on('input', function() {
+            this.style.height = 'auto';
+            this.style.height = this.scrollHeight + 'px';
+        });
+    </script>
 
 </body>
 </html>

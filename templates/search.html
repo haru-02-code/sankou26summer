@@ -64,7 +64,11 @@
         <p id="empty-message" class="text-[#8B8795] text-sm mt-8 hidden">作品名を入力して検索してください</p>
     </main>
 
+    {% include 'footer.html' %}
+
     <script>
+        // fetch APIによる非同期通信が中心のため、素のJavaScriptで実装
+
         const searchInput = document.getElementById('search-input');
         const searchBtn = document.getElementById('search-btn');
         const resultsBox = document.getElementById('results');
