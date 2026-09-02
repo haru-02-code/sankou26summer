@@ -61,14 +61,13 @@
         <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
 
             {% for movie in movies %}
-            <a href="/movie/{{ movie[0] }}?sort={{ sort }}" class="group">
+            <a href="/movie/tmdb/{{ movie[7] }}/{{ movie[6] }}?sort={{ sort }}" class="group">
                 <div class="poster rounded overflow-hidden bg-[#1C1A22] flex items-end p-2 relative">
-                    {% if movie[6] %}
-                    <!-- ぼかし画像専用の入れ子コンテナ -->
+                    {% if movie[2] %}
                     <div class="absolute inset-0 overflow-hidden rounded">
-                        <img src="/{{ movie[6] }}" class="absolute inset-0 w-full h-full object-cover blur-xl scale-125 opacity-50 rounded">
+                        <img src="{{ movie[2] }}" class="absolute inset-0 w-full h-full object-cover blur-xl scale-125 opacity-50 rounded">
                     </div>
-                    <img src="/{{ movie[6] }}" class="absolute inset-0 w-full h-full object-contain rounded">
+                    <img src="{{ movie[2] }}" class="absolute inset-0 w-full h-full object-contain rounded">
                     <div class="poster-frame"></div>
                     {% else %}
                     <span class="relative text-xs text-[#EDEBF0]/70 font-title-jp tracking-wide">{{ movie[1] }}</span>
@@ -76,9 +75,9 @@
                 </div>
                 <p class="poster-caption text-[11px] text-[#8B8795] font-title-jp mt-1.5 truncate {% if sort == 'score' %}text-center{% endif %}">
                     {% if sort == 'date' %}
-                    {{ movie[3] }}
+                    {{ movie[4] }}
                     {% elif sort == 'score' %}
-                    ★{{ movie[4] }}
+                    ★{{ movie[3] }}
                     {% else %}
                     {{ movie[1] }}
                     {% endif %}

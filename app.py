@@ -124,8 +124,8 @@ def get_or_create_movie(media_type, tmdb_id):
     poster_path = save_tmdb_image(data.get('poster_path'))
     backdrop_path = save_tmdb_image(data.get('backdrop_path'))
 
-    sql = "insert into movies (tmdb_id, title, overview, poster_path, backdrop_path, release_date, genre_ids) values (%s, %s, %s, %s, %s, %s, %s)"
-    cur.execute(sql, [tmdb_id, title, overview, poster_path, backdrop_path, release_date, genre_ids])
+    sql = "insert into movies (tmdb_id, media_type, title, overview, poster_path, backdrop_path, release_date, genre_ids) values (%s, %s, %s, %s, %s, %s, %s, %s)"
+    cur.execute(sql, [tmdb_id, media_type, title, overview, poster_path, backdrop_path, release_date, genre_ids])
     con.commit()
 
     movie_id = cur.lastrowid
@@ -135,21 +135,28 @@ def get_or_create_movie(media_type, tmdb_id):
 
     return movie_id
 
+# index(log画面)
 @app.route('/')
 def index():
     sort = request.args.get('sort', 'name')
 
     sort_options = {
-        'name': 'title asc',
-        'date': 'created_at desc',
-        'score': 'rating desc'
+        'name': 'movies.title asc',
+        'date': 'reviews.created_at desc',
+        'score': 'reviews.rating desc'
     }
-    order_by = sort_options.get(sort, 'created_at desc')
+    order_by = sort_options.get(sort, 'reviews.created_at desc')
 
     con = conn_db()
     cur = con.cursor()
 
-    sql = f"select * from movies order by {order_by}"
+    sql = f"""
+        select reviews.id, movies.title, movies.poster_path, reviews.rating,
+               reviews.watched_date, reviews.created_at, movies.tmdb_id, movies.media_type
+        from reviews
+        join movies on reviews.movie_id = movies.id
+        order by {order_by}
+    """
     cur.execute(sql)
     movies = cur.fetchall()
 
@@ -264,7 +271,8 @@ def movie_tmdb_detail(media_type, tmdb_id):
     con.close()
 
     return render_template("movie_detail_new.html", movie=movie, media_type=media_type,
-                            in_watchlist=in_watchlist, review_count=review_count)
+                            in_watchlist=in_watchlist, review_count=review_count,
+                            today=date.today().isoformat())
 #ウォッチリスト追加用のルート
 @app.route('/watchlist/add', methods=['POST'])
 def add_to_watchlist():
@@ -300,6 +308,10 @@ def add_review():
         return 'エラー：日付の形式が正しくありません'
     if not re.match(r"^([1-9]|[1-9][0-9]|100)$", rating):
         return 'エラー：評価は1〜100の数値で入力してください'
+
+    # 未来の日付でないか、サーバー側でも確認する
+    if watched_date > date.today().isoformat():
+        return 'エラー：視聴日は今日以前の日付を選んでください'
 
     # 作品をDBに確保する
     movie_id = get_or_create_movie(media_type, tmdb_id)

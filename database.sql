@@ -21,6 +21,7 @@ CREATE TABLE movies (
 CREATE TABLE movies (
     id int primary key auto_increment,
     tmdb_id int unique,
+    media_type varchar(10),
     title varchar(255) NOT NULL,
     overview text,
     poster_path varchar(255),
