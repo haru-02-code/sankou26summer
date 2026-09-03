@@ -1,3 +1,20 @@
+<style>
+    #log-watched-date::-webkit-calendar-picker-indicator {
+        filter: invert(0.6);
+    }
+    .poster-frame {
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.12);
+        transition: box-shadow 0.15s ease-in;
+        pointer-events: none;
+    }
+    .group:hover .poster-frame {
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.3);
+    }
+</style>
+
 <header class="{% if transparent %}absolute top-0 left-0 right-0 bg-gradient-to-b from-black/20 to-transparent{% else %}sticky top-0 border-b border-[#232229] bg-[#0A0A0C]/90 backdrop-blur{% endif %} z-30">
     <div class="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
         <a href="{{ url_for('index') }}" class="font-display text-2xl tracking-wide">Watchive</a>
@@ -13,3 +30,201 @@
         </nav>
     </div>
 </header>
+
+<!-- +ログ モーダル -->
+<div id="log-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center">
+    <div id="log-modal-overlay" class="absolute inset-0 bg-black/70"></div>
+
+    <div class="relative bg-[#151418] border border-[#2A2932] rounded-lg w-full max-w-md mx-4">
+
+        <!-- ステージ1: 検索 -->
+        <div id="log-stage-search" class="p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="font-title-jp text-xl">ログを追加</h2>
+                <button id="log-modal-close-1" class="text-[#8B8795] hover:text-white text-xl leading-none">&times;</button>
+            </div>
+
+            <!-- 映画／TVタブ -->
+            <div class="flex gap-2 mb-3">
+                <button type="button" id="log-tab-movie" class="log-tab-btn px-4 py-1.5 rounded text-sm bg-[#3ECF8E] text-[#0A0A0C]" data-type="movie">映画</button>
+                <button type="button" id="log-tab-tv" class="log-tab-btn px-4 py-1.5 rounded text-sm bg-[#0A0A0C] text-[#B8B4C0]" data-type="tv">TV</button>
+            </div>
+
+            <input type="text" id="log-search-input" placeholder="作品名を入力..."
+                autocomplete="new-password" autocapitalize="off" spellcheck="false"
+                class="w-full bg-[#0A0A0C] border border-[#2A2932] text-sm text-[#EDEBF0] rounded px-4 py-2.5">
+
+            <div id="log-search-results" class="mt-3 max-h-80 overflow-y-auto"></div>
+        </div>
+
+        <!-- ステージ2: レビュー入力（最初は非表示） -->
+        <div id="log-stage-review" class="hidden p-6">
+            <div class="flex items-center gap-3 mb-6">
+                <button id="log-back-btn" class="text-[#8B8795] hover:text-white">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="19" y1="12" x2="5" y2="12"></line>
+                        <polyline points="12 19 5 12 12 5"></polyline>
+                    </svg>
+                </button>
+                <h2 class="font-title-jp text-xl flex-1">視聴を記録</h2>
+                <button id="log-modal-close-2" class="text-[#8B8795] hover:text-white text-xl leading-none">&times;</button>
+            </div>
+
+            <div class="flex gap-4 mb-6">
+                <a id="log-selected-poster-link" href="#" class="w-16 aspect-[2/3] flex-shrink-0 relative rounded overflow-hidden group">
+                    <img id="log-selected-poster" src="" class="w-full h-full object-cover">
+                    <div class="poster-frame"></div>
+                </a>
+                <div>
+                    <p id="log-selected-title" class="font-title-jp text-lg"></p>
+                    <p id="log-selected-year" class="text-xs text-[#8B8795]"></p>
+                </div>
+            </div>
+
+            <form id="log-review-form" action="/reviews/add" method="post">
+                <input type="hidden" name="media_type" id="log-media-type">
+                <input type="hidden" name="tmdb_id" id="log-tmdb-id">
+
+                <div class="mb-4">
+                    <label class="block text-xs tracking-[0.2em] text-[#8B8795] uppercase mb-2">視聴日</label>
+                    <input type="date" name="watched_date" id="log-watched-date" required
+                           class="w-full bg-[#0A0A0C] border border-[#2A2932] text-sm text-[#EDEBF0] rounded px-3 py-2">
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-xs tracking-[0.2em] text-[#8B8795] uppercase mb-2">マイスコア（1〜100）</label>
+                    <input type="number" name="rating" min="1" max="100" required
+                           class="w-full bg-[#0A0A0C] border border-[#2A2932] text-sm text-[#EDEBF0] rounded px-3 py-2">
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-xs tracking-[0.2em] text-[#8B8795] uppercase mb-2">感想</label>
+                    <textarea name="review" rows="3" id="log-review-textarea"
+                              class="w-full bg-[#0A0A0C] border border-[#2A2932] text-sm text-[#EDEBF0] rounded px-3 py-2 resize-none overflow-hidden"></textarea>
+                </div>
+
+                <button type="submit" class="w-full bg-[#3ECF8E] text-[#0A0A0C] py-2.5 rounded text-sm font-semibold hover:opacity-90">
+                    保存する
+                </button>
+            </form>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    $(document).ready(function() {
+        let logCurrentType = 'movie';
+        let logDebounceTimer;
+
+        // モーダルを開く
+        $('#open-log-modal').on('click', function() {
+            $('#log-modal').removeClass('hidden');
+            $('#log-stage-search').removeClass('hidden');
+            $('#log-stage-review').addClass('hidden');
+            $('#log-search-input').val('').focus();
+            $('#log-search-results').empty();
+
+            // タブを「映画」にリセットする
+            logCurrentType = 'movie';
+            $('.log-tab-btn').removeClass('bg-[#3ECF8E] text-[#0A0A0C]').addClass('bg-[#0A0A0C] text-[#B8B4C0]');
+            $('#log-tab-movie').removeClass('bg-[#0A0A0C] text-[#B8B4C0]').addClass('bg-[#3ECF8E] text-[#0A0A0C]');
+        });
+
+        // タブ切り替え
+        $('.log-tab-btn').on('click', function() {
+            logCurrentType = $(this).data('type');
+
+            $('.log-tab-btn').removeClass('bg-[#3ECF8E] text-[#0A0A0C]').addClass('bg-[#0A0A0C] text-[#B8B4C0]');
+            $(this).removeClass('bg-[#0A0A0C] text-[#B8B4C0]').addClass('bg-[#3ECF8E] text-[#0A0A0C]');
+
+            // タブが変わったら、今の検索ワードで再検索
+            const query = $('#log-search-input').val();
+            if (query.length > 0) {
+                $.getJSON('/api/search_movie', { query: query, type: logCurrentType }, function(data) {
+                    showLogSearchResults(data);
+                });
+            }
+        });
+
+        // モーダルを閉じる
+        $('#log-modal-close-1, #log-modal-close-2, #log-modal-overlay').on('click', function() {
+            $('#log-modal').addClass('hidden');
+        });
+
+        // 検索欄への入力（デバウンス付き）
+        $('#log-search-input').on('input', function() {
+            clearTimeout(logDebounceTimer);
+            const query = $(this).val();
+
+            if (query.length < 1) {
+                $('#log-search-results').empty();
+                return;
+            }
+
+            logDebounceTimer = setTimeout(function() {
+                $.getJSON('/api/search_movie', { query: query, type: logCurrentType }, function(data) {
+                    showLogSearchResults(data);
+                });
+            }, 300);
+        });
+
+        function showLogSearchResults(data) {
+            const box = $('#log-search-results');
+            box.empty();
+
+            if (data.length === 0) {
+                box.html('<p class="text-sm text-[#6B6678] px-1">見つかりませんでした</p>');
+                return;
+            }
+
+            data.slice(0, 8).forEach(function(item) {
+                const title = item.title || item.name;
+                const date = item.release_date || item.first_air_date || '';
+                const year = date ? date.slice(0, 4) : '不明';
+                const posterUrl = item.poster_path ? 'https://image.tmdb.org/t/p/w92' + item.poster_path : '';
+
+                const row = $(`
+                    <div class="flex items-center gap-3 px-1 py-2 hover:bg-[#1C1A22] rounded">
+                        <a href="/movie/tmdb/${logCurrentType}/${item.id}" class="flex-shrink-0">
+                            <img src="${posterUrl}" class="w-8 aspect-[2/3] object-cover rounded bg-[#0A0A0C] hover:opacity-70 transition-opacity">
+                        </a>
+                        <span class="text-sm cursor-pointer flex-1">${title} <span class="text-[#6B6678] text-xs">(${year})</span></span>
+                    </div>
+                `);
+
+                row.find('span.cursor-pointer').on('click', function() {
+                    goToLogReviewStage(item, posterUrl, title, year);
+                });
+
+                box.append(row);
+            });
+        }
+
+        // ステージ2（レビュー入力）に切り替える
+        function goToLogReviewStage(item, posterUrl, title, year) {
+            $('#log-stage-search').addClass('hidden');
+            $('#log-stage-review').removeClass('hidden');
+
+            $('#log-selected-poster').attr('src', posterUrl);
+            $('#log-selected-poster-link').attr('href', '/movie/tmdb/' + logCurrentType + '/' + item.id);
+            $('#log-selected-title').text(title);
+            $('#log-selected-year').text(year);
+
+            $('#log-media-type').val(logCurrentType);
+            $('#log-tmdb-id').val(item.id);
+        }
+
+        // 「戻る」ボタンで、検索ステージに戻る
+        $('#log-back-btn').on('click', function() {
+            $('#log-stage-review').addClass('hidden');
+            $('#log-stage-search').removeClass('hidden');
+        });
+
+        // 感想欄の自動リサイズ
+        $('#log-review-textarea').on('input', function() {
+            this.style.height = 'auto';
+            this.style.height = this.scrollHeight + 'px';
+        });
+    });
+</script>
