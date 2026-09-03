@@ -1,3 +1,15 @@
-<header>
-    
+<header class="{% if transparent %}absolute top-0 left-0 right-0 bg-gradient-to-b from-black/20 to-transparent{% else %}sticky top-0 border-b border-[#232229] bg-[#0A0A0C]/90 backdrop-blur{% endif %} z-30">
+    <div class="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
+        <a href="{{ url_for('index') }}" class="font-display text-2xl tracking-wide">Watchive</a>
+
+        <nav class="flex items-center gap-6">
+            <a href="{{ url_for('index') }}" class="text-sm text-[#E5E2E8] hover:text-white transition-colors" style="text-shadow: 0 1px 3px rgba(0,0,0,0.6);">マイログ</a>
+    <a href="/watchlist" class="text-sm text-[#E5E2E8] hover:text-white transition-colors" style="text-shadow: 0 1px 3px rgba(0,0,0,0.6);">ウォッチリスト</a>
+    <a href="{{ url_for('search') }}" class="text-sm text-[#E5E2E8] hover:text-white transition-colors" style="text-shadow: 0 1px 3px rgba(0,0,0,0.6);">検索</a>
+
+            <button id="open-log-modal" class="bg-[#3ECF8E] text-[#0A0A0C] text-sm font-semibold px-4 py-1.5 rounded hover:opacity-90 transition-opacity">
+                + ログ
+            </button>
+        </nav>
+    </div>
 </header>

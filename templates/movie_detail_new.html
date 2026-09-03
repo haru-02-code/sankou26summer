@@ -60,13 +60,20 @@
 </head>
 <body class="min-h-screen text-[#EDEBF0]">
 
+    
+
     <!-- ヒーロー背景 -->
     <div class="relative max-w-6xl mx-auto {% if movie.backdrop_path %}h-[700px]{% else %}h-[300px]{% endif %} overflow-hidden">
         {% if movie.backdrop_path %}
         <img src="{{ movie.backdrop_path }}" class="absolute inset-0 w-full h-full object-cover backdrop-fade-in">
         {% endif %}
         <div class="absolute inset-0 cinematic-fade"></div>
-        <header class="relative max-w-6xl mx-auto px-6 py-5">
+
+        {% with transparent=True %}
+            {% include 'header.html' %}
+        {% endwith %}
+
+        <div class="relative max-w-6xl mx-auto px-6 pb-5" style="margin-top: 70px;">
             <a href="#" onclick="history.back(); return false;"
             class="inline-flex items-center gap-2 text-sm text-[#B8B4C0] hover:text-white transition-colors">
                 <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -75,7 +82,7 @@
                 </svg>
                 戻る
             </a>
-        </header>
+        </div>
     </div>
 
     <!-- コンテンツ本体 -->
