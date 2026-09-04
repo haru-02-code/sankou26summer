@@ -130,15 +130,34 @@
                     <p class="text-sm text-[#3ECF8E] mb-4">レビュー登録済み（{{ review_count }}件）</p>
                     {% endif %}
 
-                    <form action="/watchlist/add" method="post" class="mb-3">
-                        <input type="hidden" name="media_type" value="{{ media_type }}">
-                        <input type="hidden" name="tmdb_id" value="{{ movie.tmdb_id }}">
-                        {% if in_watchlist %}
-                        <button type="submit" disabled class="w-full border border-[#2A2932] text-[#6B6678] px-4 py-2 rounded text-sm">ウォッチリスト追加済み</button>
+                        {% if from_page == 'watchlist' %}
+                            <!-- ウォッチリスト画面から来た場合：今まで通り、ページ遷移する -->
+                            {% if in_watchlist %}
+                            <form action="/watchlist/remove" method="post" class="mb-3">
+                                <input type="hidden" name="tmdb_id" value="{{ movie.tmdb_id }}">
+                                <input type="hidden" name="from" value="{{ from_page }}">
+                                <button type="submit" class="w-full border border-[#2A2932] text-[#B45D7A] px-4 py-2 rounded text-sm hover:border-[#B45D7A] transition-colors">
+                                    ウォッチリストから削除
+                                </button>
+                            </form>
+                            {% else %}
+                            <form action="/watchlist/add" method="post" class="mb-3">
+                                <input type="hidden" name="media_type" value="{{ media_type }}">
+                                <input type="hidden" name="tmdb_id" value="{{ movie.tmdb_id }}">
+                                <button type="submit" class="w-full border border-[#2A2932] text-[#B8B4C0] px-4 py-2 rounded text-sm hover:border-[#3ECF8E] hover:text-[#3ECF8E] transition-colors">+ ウォッチリストに追加</button>
+                            </form>
+                            {% endif %}
                         {% else %}
-                        <button type="submit" class="w-full border border-[#2A2932] text-[#B8B4C0] px-4 py-2 rounded text-sm hover:border-[#3ECF8E] hover:text-[#3ECF8E] transition-colors">+ ウォッチリストに追加</button>
+                            <!-- マイログ・検索から来た場合：ページ遷移せず、その場でボタンが切り替わる -->
+                            <button type="button" id="watchlist-toggle-btn"
+                                    data-tmdb-id="{{ movie.tmdb_id }}"
+                                    data-media-type="{{ media_type }}"
+                                    data-in-watchlist="{{ 'true' if in_watchlist else 'false' }}"
+                                    data-is-new="{{ 'true' if is_new_movie else 'false' }}"
+                                    class="w-full border px-4 py-2 rounded text-sm mb-3 transition-colors {% if in_watchlist %}border-[#2A2932] text-[#B45D7A] hover:border-[#B45D7A]{% else %}border-[#2A2932] text-[#B8B4C0] hover:border-[#3ECF8E] hover:text-[#3ECF8E]{% endif %}">
+                                {% if in_watchlist %}ウォッチリストから削除{% else %}+ ウォッチリストに追加{% endif %}
+                            </button>
                         {% endif %}
-                    </form>
 
                     <button id="open-review-modal" class="w-full bg-[#3ECF8E] text-[#0A0A0C] px-4 py-2 rounded text-sm font-semibold hover:opacity-90 transition-opacity">
                         レビューを書く
@@ -205,6 +224,49 @@
         $('#review-textarea').on('input', function() {
             this.style.height = 'auto';
             this.style.height = this.scrollHeight + 'px';
+        });
+
+        $('#watchlist-toggle-btn').on('click', function() {
+            const btn = $(this);
+            const isNew = btn.data('is-new') === true || btn.data('is-new') === 'true';
+            const originalText = btn.text();
+
+            // 初めての作品のときだけ、「処理中...」を表示する
+            if (isNew) {
+                btn.prop('disabled', true).text('処理中...');
+            } else {
+                // 2回目以降は、ボタンだけ一時的に無効化（連打防止）。文字は変えない
+                btn.prop('disabled', true);
+            }
+
+            const tmdbId = btn.data('tmdb-id');
+            const mediaType = btn.data('media-type');
+            const inWatchlist = btn.data('in-watchlist') === true || btn.data('in-watchlist') === 'true';
+
+            const url = inWatchlist ? '/watchlist/remove' : '/watchlist/add';
+
+            $.post(url, {
+                tmdb_id: tmdbId,
+                media_type: mediaType,
+                from: 'ajax'
+            }, function() {
+                if (inWatchlist) {
+                    btn.text('+ ウォッチリストに追加');
+                    btn.removeClass('text-[#B45D7A] hover:border-[#B45D7A]');
+                    btn.addClass('text-[#B8B4C0] hover:border-[#3ECF8E] hover:text-[#3ECF8E]');
+                    btn.data('in-watchlist', false);
+                } else {
+                    btn.text('ウォッチリストから削除');
+                    btn.removeClass('text-[#B8B4C0] hover:border-[#3ECF8E] hover:text-[#3ECF8E]');
+                    btn.addClass('text-[#B45D7A] hover:border-[#B45D7A]');
+                    btn.data('in-watchlist', true);
+                }
+
+                // 一度DBに保存されたら、以降は「新規」ではなくなる
+                btn.data('is-new', false);
+            }).always(function() {
+                btn.prop('disabled', false);
+            });
         });
     </script>
 

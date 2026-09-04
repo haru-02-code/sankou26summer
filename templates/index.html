@@ -30,7 +30,7 @@
         }
     </style>
 </head>
-<body class="min-h-screen text-[#EDEBF0] pb-20">
+<body class="min-h-screen text-[#EDEBF0]">
 
     {% include 'header.html' %}
 
@@ -68,7 +68,7 @@
         <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
 
             {% for movie in movies %}
-            <a href="/movie/tmdb/{{ movie[7] }}/{{ movie[6] }}?sort={{ sort }}" class="group">
+            <a href="/movie/tmdb/{{ movie[7] }}/{{ movie[6] }}?sort={{ sort }}&from=mylog" class="group">
                 <div class="poster rounded overflow-hidden bg-[#1C1A22] flex items-end p-2 relative">
                     {% if movie[2] %}
                     <div class="absolute inset-0 overflow-hidden rounded">
@@ -94,6 +94,8 @@
 
         </div>
     </main>
+
+    {% include 'footer.html' %}
 
     <script>
         const toggle = document.getElementById('caption-toggle');

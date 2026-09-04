@@ -1,4 +1,4 @@
-from flask import Flask,render_template,request,redirect,url_for,jsonify
+from flask import Flask,render_template,request,redirect,url_for,jsonify,session
 # mysqlライブラリの読み込み
 import mysql.connector
 
@@ -21,6 +21,9 @@ import requests
 from datetime import date
 
 app = Flask(__name__)
+
+# 暗号化キーの設定
+app.secret_key = '2026sssankou'
 
 #ジャンルを取得する
 def load_genre_map(media_type='movie'):
@@ -97,41 +100,47 @@ def get_or_create_movie(media_type, tmdb_id):
     con = conn_db()
     cur = con.cursor()
 
-    cur.execute("select id from movies where tmdb_id = %s", [tmdb_id])
-    row = cur.fetchone()
+    try:
+        cur.execute("select id from movies where tmdb_id = %s", [tmdb_id])
+        row = cur.fetchone()
 
-    if row:
-        movie_id = row[0]
+        if row:
+            movie_id = row[0]
+            return movie_id
+
+        if media_type == 'tv':
+            url = f"https://api.themoviedb.org/3/tv/{tmdb_id}"
+        else:
+            url = f"https://api.themoviedb.org/3/movie/{tmdb_id}"
+
+        params = {"api_key": TMDB_API_KEY, "language": "ja-JP"}
+        response = requests.get(url, params=params)
+        data = response.json()
+
+        title = data.get('title') or data.get('name')
+        overview = data.get('overview')
+        release_date = data.get('release_date') or data.get('first_air_date') or None
+        genre_ids = ','.join(str(g['id']) for g in data.get('genres', []))
+
+        poster_path = save_tmdb_image(data.get('poster_path'))
+        backdrop_path = save_tmdb_image(data.get('backdrop_path'))
+
+        sql = "insert into movies (tmdb_id, media_type, title, overview, poster_path, backdrop_path, release_date, genre_ids) values (%s, %s, %s, %s, %s, %s, %s, %s)"
+        cur.execute(sql, [tmdb_id, media_type, title, overview, poster_path, backdrop_path, release_date, genre_ids])
+        con.commit()
+
+        return cur.lastrowid
+
+    except mysql.connector.IntegrityError:
+        # ほぼ同時に、別の処理が先にINSERTしていた場合（競合状態）
+        con.rollback()
+        cur.execute("select id from movies where tmdb_id = %s", [tmdb_id])
+        row = cur.fetchone()
+        return row[0] if row else None
+
+    finally:
         cur.close()
         con.close()
-        return movie_id
-
-    # まだDBにない場合、TMDbから取得する
-    if media_type == 'tv':
-        url = f"https://api.themoviedb.org/3/tv/{tmdb_id}"
-    else:
-        url = f"https://api.themoviedb.org/3/movie/{tmdb_id}"
-
-    params = {"api_key": TMDB_API_KEY, "language": "ja-JP"}
-    response = requests.get(url, params=params)
-    data = response.json()
-
-    title = data.get('title') or data.get('name')
-    overview = data.get('overview')
-    release_date = data.get('release_date') or data.get('first_air_date') or None
-    genre_ids = ','.join(str(g['id']) for g in data.get('genres', []))
-
-    poster_path = save_tmdb_image(data.get('poster_path'))
-    backdrop_path = save_tmdb_image(data.get('backdrop_path'))
-
-    sql = "insert into movies (tmdb_id, media_type, title, overview, poster_path, backdrop_path, release_date, genre_ids) values (%s, %s, %s, %s, %s, %s, %s, %s)"
-    cur.execute(sql, [tmdb_id, media_type, title, overview, poster_path, backdrop_path, release_date, genre_ids])
-    con.commit()
-
-    movie_id = cur.lastrowid
-
-    cur.close()
-    con.close()
 
     return movie_id
 
@@ -231,6 +240,7 @@ def search():
 
 @app.route('/movie/tmdb/<media_type>/<int:tmdb_id>')
 def movie_tmdb_detail(media_type, tmdb_id):
+    from_page = request.args.get('from', 'search')
     # 常にTMDbから最新情報を取得する
     if media_type == 'tv':
         url = f"https://api.themoviedb.org/3/{media_type}/{tmdb_id}"
@@ -257,6 +267,8 @@ def movie_tmdb_detail(media_type, tmdb_id):
     cur.execute("select id from movies where tmdb_id = %s", [tmdb_id])
     row = cur.fetchone()
 
+    is_new_movie = row is None
+
     in_watchlist = False
     review_count = 0
     if row:
@@ -272,12 +284,14 @@ def movie_tmdb_detail(media_type, tmdb_id):
 
     return render_template("movie_detail_new.html", movie=movie, media_type=media_type,
                             in_watchlist=in_watchlist, review_count=review_count,
-                            today=date.today().isoformat())
+                            today=date.today().isoformat(), from_page=from_page, is_new_movie=is_new_movie)
+
 #ウォッチリスト追加用のルート
 @app.route('/watchlist/add', methods=['POST'])
 def add_to_watchlist():
     media_type = request.form['media_type']
     tmdb_id = int(request.form['tmdb_id'])
+    from_page = request.form.get('from', '')
 
     # 作品をDBに確保する（なければ作る、あれば既存のidを使う）
     movie_id = get_or_create_movie(media_type, tmdb_id)
@@ -292,7 +306,105 @@ def add_to_watchlist():
     cur.close()
     con.close()
 
-    return redirect(url_for('index'))
+    if from_page == 'ajax':
+        return jsonify({'status': 'ok'})
+
+    return redirect(url_for('watchlist'))
+
+# ウォッチリスト参照用のルート
+@app.route('/watchlist')
+def watchlist():
+    sort = request.args.get('sort', 'name')
+
+    sort_options = {
+        'name': 'movies.title asc',
+        'date': 'watchlist.added_at desc'
+    }
+    order_by = sort_options.get(sort, 'watchlist.added_at desc')
+
+    con = conn_db()
+    cur = con.cursor()
+
+    sql = f"""
+        select watchlist.id, movies.title, movies.poster_path,
+               watchlist.added_at, movies.tmdb_id, movies.media_type
+        from watchlist
+        join movies on watchlist.movie_id = movies.id
+        order by {order_by}
+    """
+    cur.execute(sql)
+    movies = cur.fetchall()
+
+    cur.close()
+    con.close()
+
+    # 直前に削除があれば、その情報を取り出す（一度取り出したら、セッションからは消す）
+    undo_info = None
+    if 'undo_tmdb_id' in session:
+        undo_info = {
+            'tmdb_id': session.pop('undo_tmdb_id'),
+            'media_type': session.pop('undo_media_type'),
+            'title': session.pop('undo_title')
+        }
+
+    return render_template("watchlist.html", movies=movies, sort=sort, undo_info=undo_info)
+
+
+# ウォッチリスト削除用ルート
+@app.route('/watchlist/remove', methods=['POST'])
+def remove_from_watchlist():
+    tmdb_id = int(request.form['tmdb_id'])
+    from_page = request.form.get('from', '')
+
+    con = conn_db()
+    cur = con.cursor()
+
+    cur.execute("select id, title, media_type from movies where tmdb_id = %s", [tmdb_id])
+    row = cur.fetchone()
+
+    if row:
+        movie_id, title, media_type = row
+        cur.execute("delete from watchlist where movie_id = %s", [movie_id])
+        con.commit()
+
+        # ウォッチリスト画面からの削除なら、元に戻すための情報をセッションに保存
+        if from_page == 'watchlist':
+            session['undo_tmdb_id'] = tmdb_id
+            session['undo_media_type'] = media_type
+            session['undo_title'] = title
+
+    cur.close()
+    con.close()
+
+    if from_page == 'ajax':
+        return jsonify({'status': 'ok'})
+
+    if from_page == 'watchlist':
+        return redirect(url_for('watchlist'))
+    elif from_page == 'mylog':
+        return redirect(url_for('index'))
+    else:
+        return redirect(request.referrer or url_for('index'))
+
+# ウォッチリスト削除通知バー機能
+@app.route('/watchlist/undo', methods=['POST'])
+def undo_watchlist_remove():
+    media_type = request.form['media_type']
+    tmdb_id = int(request.form['tmdb_id'])
+
+    movie_id = get_or_create_movie(media_type, tmdb_id)
+
+    con = conn_db()
+    cur = con.cursor()
+
+    sql = "insert into watchlist (movie_id) values (%s)"
+    cur.execute(sql, [movie_id])
+    con.commit()
+
+    cur.close()
+    con.close()
+
+    return redirect(url_for('watchlist'))
 
 # reviews追加用ルート
 @app.route('/reviews/add', methods=['POST'])

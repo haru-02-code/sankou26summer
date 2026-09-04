@@ -276,7 +276,7 @@
                 const date = item.release_date || item.first_air_date || '';
 
                 const card = document.createElement('a');
-                card.href = '/movie/tmdb/' + currentType + '/' + item.id;
+                card.href = '/movie/tmdb/' + currentType + '/' + item.id + '?from=search';
                 card.className = 'group';
                 card.innerHTML = `
                     <div class="poster rounded overflow-hidden bg-[#1C1A22] flex items-end p-2 relative">

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ウォッチリスト - Watchive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Zen+Old+Mincho:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        html { scrollbar-gutter: stable; }
+        body { font-family: 'Inter', sans-serif; background-color: #0A0A0C; }
+        .font-display { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.03em; }
+        .poster { aspect-ratio: 2 / 3; }
+        .font-title-jp { font-family: 'Zen Old Mincho', serif; font-weight: 700; }
+        .poster-frame {
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.12);
+            transition: box-shadow 0.15s ease-in;
+            pointer-events: none;
+        }
+        .group:hover .poster-frame {
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.3);
+        }
+        .captions-hidden .poster-caption {
+            display: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-[#EDEBF0]">
+
+    {% include 'header.html' %}
+
+    <main class="max-w-6xl mx-auto px-6 mt-8 min-h-[60vh]">
+        <div class="max-w-6xl mx-auto pb-6 flex items-center justify-between">
+            <h1 class="font-display text-2xl tracking-wide">ウォッチリスト</h1>
+            <div class="flex items-center gap-4">
+                <label class="flex items-center gap-2 text-sm text-[#B8B4C0] cursor-pointer">
+                    <input type="checkbox" id="caption-toggle" checked class="sr-only">
+                    <div id="toggle-track" class="w-9 h-5 bg-[#3ECF8E] rounded-full relative transition-colors">
+                        <div id="toggle-thumb" class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform translate-x-4"></div>
+                    </div>
+                    情報を表示
+                </label>
+                <div class="relative inline-block" id="sort-dropdown">
+                    <button type="button" id="sort-trigger"
+                            class="flex items-center gap-1.5 text-sm text-[#EDEBF0] py-1 cursor-pointer">
+                        <span id="sort-label">
+                            {% if sort == 'date' %}追加日順{% else %}作品名順{% endif %}
+                        </span>
+                        <svg class="w-3.5 h-3.5 text-[#8B8795]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </button>
+                    <div id="sort-options" class="hidden absolute right-0 mt-2 w-32 bg-[#151418] border border-[#2A2932] rounded shadow-lg overflow-hidden z-20">
+                        <div class="px-4 py-2 text-sm cursor-pointer hover:bg-[#1C1A22] {% if sort == 'name' %}text-[#3ECF8E]{% else %}text-[#EDEBF0]{% endif %}" data-value="name">作品名順</div>
+                        <div class="px-4 py-2 text-sm cursor-pointer hover:bg-[#1C1A22] {% if sort == 'date' %}text-[#3ECF8E]{% else %}text-[#EDEBF0]{% endif %}" data-value="date">追加日順</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
+            {% for movie in movies %}
+            <div class="relative group">
+                <a href="/movie/tmdb/{{ movie[5] }}/{{ movie[4] }}?sort={{ sort }}&from=watchlist">
+                    <div class="poster rounded overflow-hidden bg-[#1C1A22] flex items-end p-2 relative">
+                        {% if movie[2] %}
+                        <div class="absolute inset-0 overflow-hidden rounded">
+                            <img src="{{ movie[2] }}" class="absolute inset-0 w-full h-full object-cover blur-xl scale-125 opacity-50 rounded">
+                        </div>
+                        <img src="{{ movie[2] }}" class="absolute inset-0 w-full h-full object-contain rounded">
+                        <div class="poster-frame"></div>
+                        {% else %}
+                        <span class="relative text-xs text-[#EDEBF0]/70 font-title-jp tracking-wide">{{ movie[1] }}</span>
+                        {% endif %}
+                    </div>
+                    <p class="poster-caption text-[11px] text-[#8B8795] font-title-jp mt-1.5 truncate">
+                        {% if sort == 'date' %}
+                        {{ movie[3].strftime('%Y-%m-%d') if movie[3] else '' }}
+                        {% else %}
+                        {{ movie[1] }}
+                        {% endif %}
+                    </p>
+                </a>
+
+                <!-- 削除ボタン（ホバー時のみ表示） -->
+                <form action="/watchlist/remove" method="post" class="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <input type="hidden" name="tmdb_id" value="{{ movie[4] }}">
+                    <input type="hidden" name="from" value="watchlist">
+                    <button type="submit" class="w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-red-500/80 transition-colors">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </form>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if not movies %}
+        <p class="text-[#6B6678] text-sm mt-8">ウォッチリストはまだ空です。作品を検索して追加してみましょう。</p>
+        {% endif %}
+    </main>
+
+    {% if undo_info %}
+    <div id="undo-toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#151418] border border-[#2A2932] rounded-lg shadow-lg px-5 py-3 flex items-center gap-4 z-50">
+        <p class="text-sm text-[#EDEBF0]">「{{ undo_info.title }}」をウォッチリストから削除しました</p>
+        <form action="/watchlist/undo" method="post">
+            <input type="hidden" name="tmdb_id" value="{{ undo_info.tmdb_id }}">
+            <input type="hidden" name="media_type" value="{{ undo_info.media_type }}">
+            <button type="submit" class="text-sm text-[#3ECF8E] font-semibold hover:underline">元に戻す</button>
+        </form>
+    </div>
+    {% endif %}
+
+    {% include 'footer.html' %}
+
+    <script>
+        const toggle = document.getElementById('caption-toggle');
+        const track = document.getElementById('toggle-track');
+        const thumb = document.getElementById('toggle-thumb');
+
+        toggle.addEventListener('change', function() {
+            document.body.classList.toggle('captions-hidden', !this.checked);
+            track.classList.toggle('bg-[#3ECF8E]', this.checked);
+            track.classList.toggle('bg-[#2A2932]', !this.checked);
+            thumb.classList.toggle('translate-x-4', this.checked);
+        });
+
+        const sortTrigger = document.getElementById('sort-trigger');
+        const sortOptions = document.getElementById('sort-options');
+
+        sortTrigger.addEventListener('click', function() {
+            sortOptions.classList.toggle('hidden');
+        });
+
+        document.querySelectorAll('#sort-options div').forEach(option => {
+            option.addEventListener('click', function() {
+                location.href = '/watchlist?sort=' + this.dataset.value;
+            });
+        });
+
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('#sort-dropdown')) {
+                sortOptions.classList.add('hidden');
+            }
+        });
+        const undoToast = document.getElementById('undo-toast');
+        if (undoToast) {
+            setTimeout(() => {
+                undoToast.style.transition = 'opacity 0.5s';
+                undoToast.style.opacity = '0';
+                setTimeout(() => undoToast.remove(), 500);
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
