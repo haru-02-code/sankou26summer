@@ -13,6 +13,19 @@
     .group:hover .poster-frame {
         box-shadow: inset 0 0 0 1px rgba(255,255,255,0.3);
     }
+    #log-review-form .overflow-y-auto::-webkit-scrollbar {
+        width: 6px;
+    }
+    #log-review-form .overflow-y-auto::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    #log-review-form .overflow-y-auto::-webkit-scrollbar-thumb {
+        background-color: #2A2932;
+        border-radius: 3px;
+    }
+    #log-review-form .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+        background-color: #3A3942;
+    }
 </style>
 
 <header class="{% if transparent %}absolute top-0 left-0 right-0 bg-gradient-to-b from-black/20 to-transparent{% else %}sticky top-0 border-b border-[#232229] bg-[#0A0A0C]/90 backdrop-blur{% endif %} z-30">
@@ -58,54 +71,60 @@
         </div>
 
         <!-- ステージ2: レビュー入力（最初は非表示） -->
-        <div id="log-stage-review" class="hidden p-6">
-            <div class="flex items-center gap-3 mb-6">
-                <button id="log-back-btn" class="text-[#8B8795] hover:text-white">
-                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="19" y1="12" x2="5" y2="12"></line>
-                        <polyline points="12 19 5 12 12 5"></polyline>
-                    </svg>
-                </button>
-                <h2 class="font-title-jp text-xl flex-1">視聴を記録</h2>
-                <button id="log-modal-close-2" class="text-[#8B8795] hover:text-white text-xl leading-none">&times;</button>
-            </div>
+        <div id="log-stage-review" class="hidden max-h-[85vh] flex flex-col">
+            <div class="p-6 pb-4 flex-shrink-0">
+                <div class="flex items-center gap-3 mb-6">
+                    <button id="log-back-btn" class="text-[#8B8795] hover:text-white">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="19" y1="12" x2="5" y2="12"></line>
+                            <polyline points="12 19 5 12 12 5"></polyline>
+                        </svg>
+                    </button>
+                    <h2 class="font-title-jp text-xl flex-1">視聴を記録</h2>
+                    <button id="log-modal-close-2" class="text-[#8B8795] hover:text-white text-xl leading-none">&times;</button>
+                </div>
 
-            <div class="flex gap-4 mb-6">
-                <a id="log-selected-poster-link" href="#" class="w-16 aspect-[2/3] flex-shrink-0 relative rounded overflow-hidden group">
-                    <img id="log-selected-poster" src="" class="w-full h-full object-cover">
-                    <div class="poster-frame"></div>
-                </a>
-                <div>
-                    <p id="log-selected-title" class="font-title-jp text-lg"></p>
-                    <p id="log-selected-year" class="text-xs text-[#8B8795]"></p>
+                <div class="flex gap-4">
+                    <a id="log-selected-poster-link" href="#" class="w-16 aspect-[2/3] flex-shrink-0 relative rounded overflow-hidden group">
+                        <img id="log-selected-poster" src="" class="w-full h-full object-cover">
+                        <div class="poster-frame"></div>
+                    </a>
+                    <div>
+                        <p id="log-selected-title" class="font-title-jp text-lg"></p>
+                        <p id="log-selected-year" class="text-xs text-[#8B8795]"></p>
+                    </div>
                 </div>
             </div>
 
-            <form id="log-review-form" action="/reviews/add" method="post">
-                <input type="hidden" name="media_type" id="log-media-type">
-                <input type="hidden" name="tmdb_id" id="log-tmdb-id">
+            <form id="log-review-form" action="/reviews/add" method="post" class="flex flex-col overflow-hidden flex-1">
+                <div class="overflow-y-auto px-6 flex-1">
+                    <input type="hidden" name="media_type" id="log-media-type">
+                    <input type="hidden" name="tmdb_id" id="log-tmdb-id">
 
-                <div class="mb-4">
-                    <label class="block text-xs tracking-[0.2em] text-[#8B8795] uppercase mb-2">視聴日</label>
-                    <input type="date" name="watched_date" id="log-watched-date" required
-                           class="w-full bg-[#0A0A0C] border border-[#2A2932] text-sm text-[#EDEBF0] rounded px-3 py-2">
+                    <div class="mb-4">
+                        <label class="block text-xs tracking-[0.2em] text-[#8B8795] uppercase mb-2">視聴日</label>
+                        <input type="date" name="watched_date" id="log-watched-date" required
+                            class="w-full bg-[#0A0A0C] border border-[#2A2932] text-sm text-[#EDEBF0] rounded px-3 py-2">
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-xs tracking-[0.2em] text-[#8B8795] uppercase mb-2">マイスコア（1〜100）</label>
+                        <input type="number" name="rating" min="1" max="100" required
+                            class="w-full bg-[#0A0A0C] border border-[#2A2932] text-sm text-[#EDEBF0] rounded px-3 py-2">
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-xs tracking-[0.2em] text-[#8B8795] uppercase mb-2">感想</label>
+                        <textarea name="review" rows="3" id="log-review-textarea" maxlength="2000"
+                                class="w-full bg-[#0A0A0C] border border-[#2A2932] text-sm text-[#EDEBF0] rounded px-3 py-2 resize-none overflow-hidden"></textarea>
+                    </div>
                 </div>
 
-                <div class="mb-4">
-                    <label class="block text-xs tracking-[0.2em] text-[#8B8795] uppercase mb-2">マイスコア（1〜100）</label>
-                    <input type="number" name="rating" min="1" max="100" required
-                           class="w-full bg-[#0A0A0C] border border-[#2A2932] text-sm text-[#EDEBF0] rounded px-3 py-2">
+                <div class="p-6 pt-4 flex-shrink-0">
+                    <button type="submit" class="w-full bg-[#3ECF8E] text-[#0A0A0C] py-2.5 rounded text-sm font-semibold hover:opacity-90">
+                        保存する
+                    </button>
                 </div>
-
-                <div class="mb-6">
-                    <label class="block text-xs tracking-[0.2em] text-[#8B8795] uppercase mb-2">感想</label>
-                    <textarea name="review" rows="3" id="log-review-textarea"
-                              class="w-full bg-[#0A0A0C] border border-[#2A2932] text-sm text-[#EDEBF0] rounded px-3 py-2 resize-none overflow-hidden"></textarea>
-                </div>
-
-                <button type="submit" class="w-full bg-[#3ECF8E] text-[#0A0A0C] py-2.5 rounded text-sm font-semibold hover:opacity-90">
-                    保存する
-                </button>
             </form>
         </div>
 

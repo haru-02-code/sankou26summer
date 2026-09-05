@@ -5,6 +5,9 @@ import mysql.connector
 #正規表現のモジュール
 import re
 
+#漢字からひらがな変換ライブラリ
+from kanjiconv import KanjiConv
+
 # WindowsとMacで環境に依存せず正しいパスを組み立てるため
 import os
 # 日本語の画像ファイルも正しく登録するためにファイル名を安全な英数字で自動生成
@@ -41,6 +44,7 @@ def load_genre_map(media_type='movie'):
 
 GENRE_MAP = load_genre_map('movie')
 TV_GENRE_MAP = load_genre_map('tv')
+kanji_conv = KanjiConv(separator="")
 
 EXCLUDED_GENRE_IDS_MOVIE = {99}  # ドキュメンタリー
 EXCLUDED_GENRE_IDS_TV = {99, 10763, 10764, 10767}  # ドキュメンタリー, News, Reality, Talk
@@ -137,6 +141,7 @@ def index():
     sort_options = {
         'name': 'movies.title asc',
         'date': 'reviews.created_at desc',
+        'watched': 'reviews.watched_date desc',
         'score': 'reviews.rating desc'
     }
     order_by = sort_options.get(sort, 'reviews.created_at desc')
@@ -175,47 +180,60 @@ def search_movie():
         url = "https://api.themoviedb.org/3/search/movie"
         excluded_genre_ids = EXCLUDED_GENRE_IDS_MOVIE
 
-    params = {
-        "api_key": TMDB_API_KEY,
-        "query": query,
-        "language": "ja-JP",
-        "include_adult": False
-    }
+    # 元の検索ワードと、ひらがな変換した検索ワードの、両方を用意する
+    try:
+        hiragana_query = kanji_conv.to_hiragana(query)
+    except Exception:
+        hiragana_query = query
 
-    response = requests.get(url, params=params)
-    data = response.json()
+    queries_to_try = [query]
+    if hiragana_query != query:
+        queries_to_try.append(hiragana_query)
 
     MIN_POPULARITY = 2
     today_str = date.today().isoformat()
 
-    results = []
-    for item in data['results']:
-        if item.get('adult', False):
-            continue
-        if item.get('video', False):
-            continue
-        if item.get('popularity', 0) < MIN_POPULARITY:
-            continue
+    all_results = []
+    seen_ids = set()
 
-        release = item.get('release_date') or item.get('first_air_date') or ''
-        if not release:
-            continue
-        if release > today_str:
-            continue
+    for q in queries_to_try:
+        params = {
+            "api_key": TMDB_API_KEY,
+            "query": q,
+            "language": "ja-JP",
+            "include_adult": False
+        }
+        response = requests.get(url, params=params)
+        data = response.json()
 
-        #あらすじなのを除外はやめた方がいいかも    
-        # if not item.get('overview'):
-        #     continue
-        if not item.get('poster_path'):
-            continue
+        for item in data.get('results', []):
+            if item['id'] in seen_ids:
+                continue
 
-        genre_ids = set(item.get('genre_ids', []))
-        if genre_ids & excluded_genre_ids:
-            continue
+            if item.get('adult', False):
+                continue
+            if item.get('video', False):
+                continue
+            if item.get('popularity', 0) < MIN_POPULARITY:
+                continue
 
-        results.append(item)
+            release = item.get('release_date') or item.get('first_air_date') or ''
+            if not release:
+                continue
+            if release > today_str:
+                continue
 
-    return jsonify(results)
+            if not item.get('poster_path'):
+                continue
+
+            genre_ids = set(item.get('genre_ids', []))
+            if genre_ids & excluded_genre_ids:
+                continue
+
+            seen_ids.add(item['id'])
+            all_results.append(item)
+
+    return jsonify(all_results)
 
 #検索画面へのルート
 @app.route('/search')
@@ -405,6 +423,8 @@ def add_review():
         return 'エラー：日付の形式が正しくありません'
     if not re.match(r"^([1-9]|[1-9][0-9]|100)$", rating):
         return 'エラー：評価は1〜100の数値で入力してください'
+    if review and not re.match(r"^.{0,2000}$", review, re.DOTALL):
+        return 'エラー：感想は2000文字以内で入力してください'
 
     # 未来の日付でないか、サーバー側でも確認する
     if watched_date > date.today().isoformat():

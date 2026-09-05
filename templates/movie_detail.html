@@ -56,6 +56,21 @@
         input[type="date"]::-webkit-calendar-picker-indicator {
             filter: invert(0.6);
         }
+
+        /* レビューモーダルのスクロールバーを、細くミニマルにする */
+        #review-form .overflow-y-auto::-webkit-scrollbar {
+            width: 6px;
+        }
+        #review-form .overflow-y-auto::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        #review-form .overflow-y-auto::-webkit-scrollbar-thumb {
+            background-color: #2A2932;
+            border-radius: 3px;
+        }
+        #review-form .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+            background-color: #3A3942;
+        }
     </style>
 </head>
 <body class="min-h-screen text-[#EDEBF0]">
@@ -171,37 +186,41 @@
     <div id="review-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center">
         <div id="modal-overlay" class="absolute inset-0 bg-black/70"></div>
 
-        <div class="relative bg-[#151418] border border-[#2A2932] rounded-lg w-full max-w-md mx-4 p-6">
-            <div class="flex items-center justify-between mb-6">
+        <div class="relative bg-[#151418] border border-[#2A2932] rounded-lg w-full max-w-md mx-4 max-h-[85vh] flex flex-col">
+            <div class="flex items-center justify-between p-6 pb-4 flex-shrink-0">
                 <h2 class="font-title-jp text-xl">レビューを書く</h2>
                 <button id="close-modal" class="text-[#8B8795] hover:text-white text-xl leading-none">&times;</button>
             </div>
 
-            <form id="review-form" action="/reviews/add" method="post">
-                <input type="hidden" name="media_type" value="{{ media_type }}">
-                <input type="hidden" name="tmdb_id" value="{{ movie.tmdb_id }}">
+            <form id="review-form" action="/reviews/add" method="post" class="flex flex-col overflow-hidden flex-1">
+                <div class="overflow-y-auto px-6 flex-1">
+                    <input type="hidden" name="media_type" value="{{ media_type }}">
+                    <input type="hidden" name="tmdb_id" value="{{ movie.tmdb_id }}">
 
-                <div class="mb-4">
-                    <label class="block text-xs tracking-[0.2em] text-[#8B8795] uppercase mb-2">視聴日</label>
-                    <input type="date" name="watched_date" required max="{{ today }}"
-                        class="w-full bg-[#0A0A0C] border border-[#2A2932] text-sm text-[#EDEBF0] rounded px-3 py-2">
+                    <div class="mb-4">
+                        <label class="block text-xs tracking-[0.2em] text-[#8B8795] uppercase mb-2">視聴日</label>
+                        <input type="date" name="watched_date" required max="{{ today }}"
+                            class="w-full bg-[#0A0A0C] border border-[#2A2932] text-sm text-[#EDEBF0] rounded px-3 py-2">
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-xs tracking-[0.2em] text-[#8B8795] uppercase mb-2">マイスコア（1〜100）</label>
+                        <input type="number" name="rating" min="1" max="100" required
+                            class="w-full bg-[#0A0A0C] border border-[#2A2932] text-sm text-[#EDEBF0] rounded px-3 py-2">
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-xs tracking-[0.2em] text-[#8B8795] uppercase mb-2">感想</label>
+                        <textarea name="review" rows="3" id="review-textarea" maxlength="2000"
+                                class="w-full bg-[#0A0A0C] border border-[#2A2932] text-sm text-[#EDEBF0] rounded px-3 py-2 resize-none overflow-hidden"></textarea>
+                    </div>
                 </div>
 
-                <div class="mb-4">
-                    <label class="block text-xs tracking-[0.2em] text-[#8B8795] uppercase mb-2">マイスコア（1〜100）</label>
-                    <input type="number" name="rating" min="1" max="100" required
-                        class="w-full bg-[#0A0A0C] border border-[#2A2932] text-sm text-[#EDEBF0] rounded px-3 py-2">
+                <div class="p-6 pt-4 flex-shrink-0">
+                    <button type="submit" class="w-full bg-[#3ECF8E] text-[#0A0A0C] py-2.5 rounded text-sm font-semibold hover:opacity-90">
+                        レビューを保存する
+                    </button>
                 </div>
-
-                <div class="mb-6">
-                    <label class="block text-xs tracking-[0.2em] text-[#8B8795] uppercase mb-2">感想</label>
-                    <textarea name="review" rows="4" id="review-textarea"
-                            class="w-full bg-[#0A0A0C] border border-[#2A2932] text-sm text-[#EDEBF0] rounded px-3 py-2 resize-none overflow-hidden"></textarea>
-                </div>
-
-                <button type="submit" class="w-full bg-[#3ECF8E] text-[#0A0A0C] py-2.5 rounded text-sm font-semibold hover:opacity-90">
-                    レビューを保存する
-                </button>
             </form>
         </div>
     </div>
